@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EFB App</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a2342">
+    <style>
+        :root {
+            --blue-dark: #0a2342;
+            --blue-mid: #133b5c;
+            --blue-light: #263859;
+            --red: #b71c1c;
+            --tab-active: #1e90ff;
+            --tab-bg: #1e2a3a;
+            --border-radius: 18px;
+        }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #222;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .topbar {
+            background: var(--blue-dark);
+            padding: 12px 24px 8px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .flight-info {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+        .info-red {
+            background: var(--red);
+            color: #fff;
+            border-radius: var(--border-radius);
+            padding: 7px 18px;
+            font-weight: bold;
+            font-size: 1.1em;
+            letter-spacing: 1px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+        }
+        .info {
+            background: var(--blue-light);
+            color: #fff;
+            border-radius: var(--border-radius);
+            padding: 7px 18px;
+            font-size: 1em;
+            letter-spacing: 1px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+        }
+        .settings {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .settings button {
+            background: var(--blue-light);
+            border: none;
+            color: #fff;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .settings button:hover {
+            background: var(--tab-active);
+        }
+        .tabs {
+            background: var(--blue-mid);
+            display: flex;
+            gap: 2px;
+            padding: 0 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+        }
+        .tab {
+            flex: 1;
+            padding: 14px 0 10px 0;
+            text-align: center;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            background: var(--blue-mid);
+            font-size: 1em;
+            transition: background 0.2s, border-bottom 0.2s;
+            user-select: none;
+        }
+        .tab.active {
+            border-bottom: 3px solid var(--tab-active);
+            background: var(--tab-bg);
+            color: #fff;
+        }
+        .tab a {
+            color: #1e90ff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .tab a:hover {
+            text-decoration: underline;
+        }
+        .content {
+            padding: 24px 18px;
+            background: #222;
+            min-height: 400px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .charts-link {
+            color: #1e90ff;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+        .flightlog-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: #222;
+        }
+        .flightlog-table th, .flightlog-table td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: left;
+        }
+        .flightlog-table th {
+            background: var(--blue-light);
+        }
+        .flightlog-table tr:nth-child(even) {
+            background: #1a1a1a;
+        }
+        .pdf-placeholder {
+            background: #333;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            color: #aaa;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+        /* Modal Styles */
+        #settings-modal {
+            display:none;
+            position:fixed;
+            top:0; left:0;
+            width:100vw; height:100vh;
+            background:rgba(0,0,0,0.7);
+            z-index:1000;
+        }
+        #settings-modal .modal-content {
+            background:#fff;
+            color:#222;
+            max-width:400px;
+            margin:80px auto;
+            padding:30px;
+            border-radius:12px;
+            position:relative;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+        }
+        #settings-modal label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+        }
+        #settings-modal input[type="text"] {
+            width:100%;
+            padding:8px;
+            margin-bottom:16px;
+            border-radius:6px;
+            border:1px solid #ccc;
+            font-size:1em;
+        }
+        #settings-modal button {
+            background: var(--blue-mid);
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+        #settings-modal button:last-child {
+            background: #aaa;
+            color: #222;
+        }
+        @media (max-width: 700px) {
+            .topbar, .content {
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+            .flight-info {
+                gap: 7px;
+            }
+            .tab {
+                font-size: 0.95em;
+                padding: 10px 0 7px 0;
+            }
+        }
+    </style>
+    <script>
+        // Tab-Wechsel
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            let tabs = document.querySelectorAll('.tab');
+            if(tab === 'dashboard') tabs[0].classList.add('active');
+            if(tab === 'ewas') tabs[1].classList.add('active');
+            if(tab === 'stations') tabs[2].classList.add('active');
+            if(tab === 'flightlog') tabs[3].classList.add('active');
+            if(tab === 'documents') tabs[4].classList.add('active');
+            if(tab === 'weightfuel') tabs[5].classList.add('active');
+            if(tab === 'mpilot') tabs[6].classList.add('active');
+            // Inhalt wechseln
+            let content = document.getElementById('tab-content');
+            if(tab === 'dashboard') {
+                content.innerHTML = `<h2>Dashboard</h2>
+                <p>Willkommen zur EFB App! Hier kannst du Flugdaten importieren, Wetter abrufen und Dokumente ansehen.</p>
+                <div style="margin-top:18px;">
+                    <button onclick="importSimBrief()" style="background:var(--tab-active);color:#fff;padding:10px 20px;border:none;border-radius:8px;font-size:1em;">SimBrief Flug importieren</button>
+                </div>`;
+            }
+            if(tab === 'ewas') {
+                content.innerHTML = `<h2>eWAS Wetter</h2>
+                <p>Wetterdaten werden von <a href="https://awwx.com/" target="_blank">awwx.com</a> geladen.</p>
+                <div style="margin-top:18px;">
+                    <button onclick="fetchWeather()" style="background:var(--tab-active);color:#fff;padding:10px 20px;border:none;border-radius:8px;font-size:1em;">Wetter abrufen</button>
+                </div>
+                <div id="weather-result" style="margin-top:20px;"></div>`;
+            }
+            if(tab === 'stations') {
+                content.innerHTML = `<h2>Stations</h2>
+                <p>Hier erscheinen Stationsdaten.</p>`;
+            }
+            if(tab === 'flightlog') {
+                content.innerHTML = `<h2>Flight Log</h2>
+                <table class="flightlog-table">
+                    <tr><th>Zeit</th><th>Aktion</th><th>Ort</th><th>Bemerkung</th></tr>
+                    <tr><td>12:30</td><td>Boarding</td><td>FRA</td><td>Start</td></tr>
+                    <tr><td>13:00</td><td>Takeoff</td><td>FRA</td><td>Abflug</td></tr>
+                    <tr><td>15:30</td><td>Landing</td><td>FNC</td><td>Ankunft</td></tr>
+                    <tr><td>15:45</td><td>Taxi</td><td>FNC</td><td>Zur Parkposition</td></tr>
+                </table>`;
+            }
+            if(tab === 'documents') {
+                content.innerHTML = `<h2>Documents</h2>
+                <div class="pdf-placeholder">PDF-Reader Platzhalter. Hier können PDF-Dokumente angezeigt werden.</div>`;
+            }
+            if(tab === 'weightfuel') {
+                content.innerHTML = `<h2>Weight & Fuel</h2>
+                <p>Hier erscheinen Gewichts- und Kraftstoffdaten.</p>`;
+            }
+            if(tab === 'mpilot') {
+                content.innerHTML = `<h2>MPilot</h2>
+                <p>MPilot Funktionen kommen hier hin.</p>`;
+            }
+        }
+
+        // Settings Modal
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'block';
+            document.getElementById('simbrief-id').value = localStorage.getItem('simbriefId') || '';
+        }
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+        function saveSettings() {
+            const id = document.getElementById('simbrief-id').value;
+            localStorage.setItem('simbriefId', id);
+            alert('SimBrief ID gespeichert!');
+            closeSettings();
+        }
+
+        // SimBrief Import (Platzhalter)
+        function importSimBrief() {
+            const id = localStorage.getItem('simbriefId');
+            if (!id) {
+                alert('Bitte zuerst die SimBrief ID in den Einstellungen eintragen!');
+                openSettings();
+                return;
+            }
+            alert('SimBrief Flugdaten werden für ID ' + id + ' importiert (Demo).');
+            // Hier könntest du später die echte API einbinden
+        }
+
+        // Wetter abrufen (Demo)
+        function fetchWeather() {
+            document.getElementById('weather-result').innerHTML = 'Wetterdaten werden geladen...';
+            setTimeout(() => {
+                document.getElementById('weather-result').innerHTML = `
+                    <strong>METAR EDDF:</strong> 2025/08/28 12:00Z 22005KT 9999 FEW020 SCT040 22/14 Q1015<br>
+                    <strong>TAF EDDF:</strong> 2025/08/28 12:00Z 22005KT 9999 SCT040 BECMG 18010KT
+                `;
+            }, 1200);
+        }
+
+        // PWA Service Worker Registrierung
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js');
+            });
+        }
+
+        // Initialer Tab
+        window.onload = () => showTab('dashboard');
+    </script>
+</head>
+<body>
+    <div class="topbar">
+        <div class="flight-info">
+            <span class="info-red">DE157</span>
+            <span class="info-red">FRA EDDF</span>
+            <span class="info-red">FNC LPMA</span>
+            <span class="info-red">30 Nov 12:30</span>
+            <span class="info">A321 DATCC</span>
+        </div>
+        <div class="settings">
+            <button title="Einstellungen" onclick="openSettings()">⚙️</button>
+        </div>
+    </div>
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('dashboard')">DASHBOARD</div>
+        <div class="tab" onclick="showTab('ewas')">eWAS (Wetter)</div>
+        <div class="tab" onclick="showTab('stations')">STATIONS</div>
+        <div class="tab" onclick="showTab('flightlog')">FLIGHT LOG</div>
+        <div class="tab" onclick="showTab('documents')">DOCUMENTS</div>
+        <div class="tab" onclick="showTab('weightfuel')">WEIGHT&FUEL</div>
+        <div class="tab" onclick="showTab('mpilot')">MPILOT</div>
+        <div class="tab"><a href="https://planner.flightsimulator.com" target="_blank" class="charts-link">CHARTS</a></div>
+    </div>
+    <div class="content" id="tab-content">
+        <!-- Inhalt wird per JS geladen -->
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal">
+        <div class="modal-content">
+            <h2>Einstellungen</h2>
+            <label for="simbrief-id">SimBrief ID:</label>
+            <input type="text" id="simbrief-id" placeholder="Deine SimBrief ID">
+            <button onclick="saveSettings()">Speichern</button>
+            <button onclick="closeSettings()">Schließen</button>
+        </div>
+    </div>
+</body>
+</html>

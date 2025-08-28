@@ -142,12 +142,22 @@
             z-index: 2000;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        .pdf-fullscreen iframe {
-            flex: 1;
-            border: none;
-            width: 100%;
-            height: 100%;
+        .pdf-fullscreen canvas {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            max-width: 95vw;
+            max-height: 80vh;
+        }
+        .pdf-fullscreen .pdf-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin: 12px 0 0 0;
         }
         .pdf-fullscreen button {
             background: #1e90ff;
@@ -156,8 +166,6 @@
             border-radius: 6px;
             padding: 8px 16px;
             font-size: 1em;
-            margin: 12px;
-            align-self: flex-end;
             cursor: pointer;
         }
         /* Flight Log Cards */
@@ -255,8 +263,9 @@
             }
         }
     </style>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
     <script>
-        // Flugplan-Daten (leer vor Import)
         let flightData = {
             flightNumber: "",
             departure: "",
@@ -273,7 +282,6 @@
             document.getElementById('date-time').textContent = flightData.dateTime || "—";
         }
 
-        // Flight Log Entries
         let flightLogEntries = [];
 
         function renderFlightLog() {
@@ -315,6 +323,81 @@
             renderFlightLog();
         }
 
+        // PDF.js Integration
+        let pdfDoc = null, pdfPageNum = 1, pdfTotalPages = 1, pdfFileUrl = null;
+        function handlePDFUpload(event) {
+            const files = event.target.files;
+            const list = document.getElementById('pdf-list');
+            list.innerHTML = '';
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const item = document.createElement('div');
+                item.className = 'pdf-item';
+                item.innerHTML = `<span>${file.name}</span> <button onclick="showPDF(${i})">Vollbild</button>`;
+                list.appendChild(item);
+            }
+            window.uploadedPDFs = files;
+        }
+        function showPDF(index) {
+            const file = window.uploadedPDFs[index];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                pdfFileUrl = e.target.result;
+                openPDFViewer(pdfFileUrl);
+            };
+            reader.readAsDataURL(file);
+        }
+        function openPDFViewer(url) {
+            const fs = document.getElementById('pdf-fullscreen');
+            fs.style.display = 'flex';
+            fs.innerHTML = `
+                <div class="pdf-controls">
+                    <button onclick="closePDF()">Schließen</button>
+                    <button onclick="prevPDFPage()">&#8592; Prev</button>
+                    <span id="pdf-page-info"></span>
+                    <button onclick="nextPDFPage()">Next &#8594;</button>
+                </div>
+                <canvas id="pdf-canvas"></canvas>
+            `;
+            loadPDF(url);
+        }
+        function closePDF() {
+            document.getElementById('pdf-fullscreen').style.display = 'none';
+            pdfDoc = null;
+            pdfFileUrl = null;
+        }
+        function loadPDF(url) {
+            pdfjsLib.getDocument(url).promise.then(function(doc) {
+                pdfDoc = doc;
+                pdfTotalPages = doc.numPages;
+                pdfPageNum = 1;
+                renderPDFPage(pdfPageNum);
+            });
+        }
+        function renderPDFPage(num) {
+            pdfDoc.getPage(num).then(function(page) {
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.getElementById('pdf-canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                page.render({ canvasContext: context, viewport: viewport });
+                document.getElementById('pdf-page-info').textContent = `Seite ${num} / ${pdfTotalPages}`;
+            });
+        }
+        function prevPDFPage() {
+            if (pdfPageNum > 1) {
+                pdfPageNum--;
+                renderPDFPage(pdfPageNum);
+            }
+        }
+        function nextPDFPage() {
+            if (pdfPageNum < pdfTotalPages) {
+                pdfPageNum++;
+                renderPDFPage(pdfPageNum);
+            }
+        }
+
         // Tab-Wechsel
         function showTab(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -329,11 +412,11 @@
                 content.innerHTML = `
                     <h2>Dashboard</h2>
                     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;">
-                        <span class="info-box">${flightData.flightNumber || "—"}</span>
-                        <span class="info-box">${flightData.departure || "—"}</span>
-                        <span class="info-box">${flightData.arrival || "—"}</span>
-                        <span class="info-box">${flightData.aircraft || "—"}</span>
-                        <span class="info-box">${flightData.dateTime || "—"}</span>
+                        <span class="info-box"><strong>Flugnummer</strong><br>${flightData.flightNumber || "—"}</span>
+                        <span class="info-box"><strong>Departure</strong><br>${flightData.departure || "—"}</span>
+                        <span class="info-box"><strong>Arrival</strong><br>${flightData.arrival || "—"}</span>
+                        <span class="info-box"><strong>Aircraft</strong><br>${flightData.aircraft || "—"}</span>
+                        <span class="info-box"><strong>Date/Time</strong><br>${flightData.dateTime || "—"}</span>
                     </div>
                     <div style="margin-top:18px;">
                         <button onclick="importSimBrief()" style="background:var(--tab-active);color:#fff;padding:10px 20px;border:none;border-radius:8px;font-size:1em;">SimBrief Flug importieren</button>
@@ -369,7 +452,7 @@
                 <input type="file" id="pdf-upload" accept="application/pdf" multiple style="margin-top:10px;">
                 <div class="pdf-list" id="pdf-list"></div>
                 <div id="pdf-viewer" class="pdf-placeholder">PDF-Reader Platzhalter. Hier können PDF-Dokumente angezeigt werden.</div>
-                <div id="pdf-fullscreen" style="display:none;"></div>`;
+                <div id="pdf-fullscreen" class="pdf-fullscreen" style="display:none;"></div>`;
                 document.getElementById('pdf-upload').addEventListener('change', handlePDFUpload);
             }
             if(tab === 'weightfuel') {
@@ -408,7 +491,6 @@
                 const xmlText = await response.text();
                 const parser = new DOMParser();
                 const xml = parser.parseFromString(xmlText, "application/xml");
-                // Extrahiere Daten
                 flightData = {
                     flightNumber: xml.querySelector("general fltnumber")?.textContent || "",
                     departure: xml.querySelector("origin")?.textContent || "",
@@ -422,45 +504,6 @@
             } catch (e) {
                 alert("Import fehlgeschlagen: " + e.message);
             }
-        }
-
-        // PDF Upload & Anzeige
-        function handlePDFUpload(event) {
-            const files = event.target.files;
-            const list = document.getElementById('pdf-list');
-            list.innerHTML = '';
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const item = document.createElement('div');
-                item.className = 'pdf-item';
-                item.innerHTML = `<span>${file.name}</span> <button onclick="showPDF(${i})">Vollbild</button>`;
-                list.appendChild(item);
-            }
-            window.uploadedPDFs = files;
-        }
-        function showPDF(index) {
-            const file = window.uploadedPDFs[index];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const url = e.target.result;
-                const fs = document.getElementById('pdf-fullscreen');
-                fs.innerHTML = `<button onclick="closePDF()" style="position:absolute;top:16px;right:16px;z-index:10;background:#1e90ff;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:1em;">Schließen</button>
-                    <iframe src="${url}" style="width:100vw;height:100vh;border:none;position:absolute;top:0;left:0;"></iframe>`;
-                fs.style.display = 'block';
-                fs.style.position = 'fixed';
-                fs.style.top = '0';
-                fs.style.left = '0';
-                fs.style.width = '100vw';
-                fs.style.height = '100vh';
-                fs.style.background = '#222b3a';
-                fs.style.zIndex = '2000';
-            };
-            reader.readAsDataURL(file);
-        }
-        function closePDF() {
-            const fs = document.getElementById('pdf-fullscreen');
-            fs.style.display = 'none';
-            fs.innerHTML = '';
         }
 
         // Wetter abrufen (Demo)
@@ -517,7 +560,6 @@
             });
         }
 
-        // Initialer Tab und Fluginfo
         window.onload = () => {
             showTab('dashboard');
             updateFlightInfo();
@@ -548,10 +590,12 @@
     <div class="content" id="tab-content">
         <!-- Inhalt wird per JS geladen -->
     </div>
-    <div id="pdf-fullscreen" style="display:none;"></div>
+    <div id="pdf-fullscreen" class="pdf-fullscreen" style="display:none;"></div>
     <!-- Settings Modal -->
     <div id="settings-modal">
         <div class="modal-content">
             <h2>Einstellungen</h2>
             <label for="simbrief-id">SimBrief ID:</label>
-            <input type="text" id="simbrief-id" placeholder
+            <input type="text" id="simbrief-id" placeholder="Deine SimBrief ID">
+            <button onclick="saveSettings()">Speichern</button>
+            <button onclick

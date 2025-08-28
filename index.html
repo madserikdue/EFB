@@ -7,20 +7,42 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
-body {margin:0;font-family:Arial,sans-serif;background:#0b1220;color:#e6eef8;}
-header {display:flex;justify-content:space-between;align-items:center;background:#0d47a1;padding:10px;}
+/* --- Farben --- */
+:root{
+  --bg:#0a0f1a;          /* Dunkelblau Hintergrund */
+  --tab:#13294a;         /* Tabs dunkelblau */
+  --tab-active:#1c3a70;  /* Aktiver Tab etwas heller */
+  --accent:#1e90ff;      /* Akzentfarbe */
+  --text:#e6eef8;
+  --card:#0f1a2a;
+}
+body {
+  margin:0; font-family:Arial,sans-serif; background:var(--bg); color:var(--text);
+}
+header {
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--tab); padding:10px;
+}
 header .flight-info span {margin-right:15px;font-weight:600;}
-nav {display:flex;background:#1565c0;}
-nav button {flex:1;padding:12px;border:none;background:#1565c0;color:white;cursor:pointer;font-weight:600;}
-nav button.active {background:#1976d2;}
-.tab {display:none;height:calc(100vh - 90px);padding:10px;}
+nav {
+  display:flex;
+  background:var(--tab);
+}
+nav button {
+  flex:1; padding:10px; border:none; background:var(--tab); color:var(--text);
+  cursor:pointer; font-weight:600; transition: background 0.2s;
+}
+nav button.active {background:var(--tab-active);}
+.tab {
+  display:none; height:calc(100vh - 90px); padding:10px;
+}
 .tab.active {display:block;}
-#map {width:100%;height:100%;}
-textarea,input {width:100%;margin:5px 0;padding:8px;border-radius:6px;border:none;}
-button {padding:8px 12px;margin:5px 0;background:#1e90ff;border:none;border-radius:6px;color:white;cursor:pointer;}
+#map {width:100%; height:100%;}
+textarea,input {width:100%;margin:5px 0;padding:8px;border-radius:6px;border:none;background:#0f1a2a;color:var(--text);}
+button {padding:8px 12px;margin:5px 0;background:var(--accent);border:none;border-radius:6px;color:white;cursor:pointer;}
 .log-tabs {display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.log-tab {padding:5px 10px;background:#1565c0;border-radius:5px;cursor:pointer;}
-.log-tab.active {background:#1976d2;}
+.log-tab {padding:5px 10px;background:var(--tab);border-radius:5px;cursor:pointer;}
+.log-tab.active {background:var(--tab-active);}
 </style>
 </head>
 <body>
@@ -126,7 +148,7 @@ function saveCurrentLog(){
   alert("Gespeichert!");
 }
 
-// SimBrief Fetch
+// SimBrief Fetch auf Knopfdruck
 async function loadFlight(){
   const id=document.getElementById("simbriefId").value.trim();
   if(!id){alert("Bitte SimBrief ID eingeben."); return;}
@@ -149,22 +171,11 @@ async function loadFlight(){
       <li>Flight: ${flightNum}</li><li>DEP: ${dep}</li><li>ARR: ${arr}</li>
       <li>ACFT: ${acft}</li><li>REG: ${reg}</li></ul>`;
 
-    // PDF
-    document.getElementById("pdf-frame").src=`https://www.simbrief.com/ofp/flightplans/${id}.pdf`;
+    // PDF auf Knopfdruck
+    document.getElementById("pdf-frame").src=""; 
+    if(confirm("PDF jetzt anzeigen?")) 
+      document.getElementById("pdf-frame").src=`https://www.simbrief.com/ofp/flightplans/${id}.pdf`;
 
     // Map
     const navs=xml.querySelectorAll("navlog_fix"); let coords=[];
-    navs.forEach(n=>{ const lat=parseFloat(n.getAttribute("lat")), lon=parseFloat(n.getAttribute("lon")); if(!isNaN(lat)&&!isNaN(lon)) coords.push([lat,lon]); });
-    markerLayer.clearLayers(); if(routeLayer) map.removeLayer(routeLayer);
-    coords.forEach(c=>L.marker(c).addTo(markerLayer));
-    routeLayer=L.polyline(coords,{color:'#1e90ff',weight:4}).addTo(map);
-    if(coords.length) map.fitBounds(routeLayer.getBounds().pad(0.2));
-
-    // Logbook per Flugnummer
-    currentFlight=flightNum; if(!logs[flightNum]) logs[flightNum]=""; renderLogTabs(); renderLogContent();
-
-  }catch(e){alert("Fehler beim Laden: "+e);}
-}
-</script>
-</body>
-</html>
+    navs.forEach(n=>{ const lat=parseFloat(n.get

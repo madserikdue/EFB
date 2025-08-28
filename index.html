@@ -47,6 +47,8 @@
             letter-spacing: 1px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.10);
             border: 2px solid var(--info-border);
+            min-width: 120px;
+            text-align: center;
         }
         .settings {
             display: flex;
@@ -112,15 +114,6 @@
             text-decoration: underline;
             font-weight: bold;
         }
-        .pdf-placeholder, .wip {
-            background: #333;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            color: #aaa;
-            font-size: 1.2em;
-            margin-top: 20px;
-        }
         .pdf-list {
             margin-top: 20px;
         }
@@ -142,13 +135,30 @@
             padding: 4px 10px;
             cursor: pointer;
         }
-        canvas {
+        .pdf-fullscreen {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
             background: #222b3a;
-            border-radius: 12px;
-            margin-top: 20px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+        }
+        .pdf-fullscreen iframe {
+            flex: 1;
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+        .pdf-fullscreen button {
+            background: #1e90ff;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 1em;
+            margin: 12px;
+            align-self: flex-end;
+            cursor: pointer;
         }
         /* Flight Log Cards */
         #flightlog-list {
@@ -167,6 +177,50 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+            position: relative;
+        }
+        .flightlog-card button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #b71c1c;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        .dashboard-box {
+            background: #222b3a;
+            border-radius: 12px;
+            padding: 18px 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+        }
+        .dashboard-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #bfc9db;
+        }
+        .dashboard-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 10px;
+        }
+        .dashboard-item {
+            min-width: 120px;
+            margin-bottom: 8px;
+        }
+        .dashboard-label {
+            color: #bfc9db;
+            font-size: 0.95em;
+        }
+        .dashboard-value {
+            font-size: 1.1em;
+            font-weight: bold;
         }
         /* Modal Styles */
         #settings-modal {
@@ -233,38 +287,36 @@
         }
     </style>
     <script>
-        // Flugplan-Daten (Demo)
+        // Flugplan-Daten (leer vor Import)
         let flightData = {
-            flightNumber: "DE157",
-            departure: "FRA EDDF",
-            arrival: "FNC LPMA",
-            dateTime: "30 Nov 12:30",
-            aircraft: "A321 DATCC"
+            flightNumber: "",
+            departure: "",
+            arrival: "",
+            aircraft: "",
+            dateTime: ""
         };
+        let dashboardData = null;
 
         function updateFlightInfo() {
-            document.getElementById('flight-number').textContent = flightData.flightNumber;
-            document.getElementById('departure').textContent = flightData.departure;
-            document.getElementById('arrival').textContent = flightData.arrival;
-            document.getElementById('date-time').textContent = flightData.dateTime;
-            document.getElementById('aircraft').textContent = flightData.aircraft;
+            document.getElementById('flight-number').textContent = flightData.flightNumber || "—";
+            document.getElementById('departure').textContent = flightData.departure || "—";
+            document.getElementById('arrival').textContent = flightData.arrival || "—";
+            document.getElementById('aircraft').textContent = flightData.aircraft || "—";
+            document.getElementById('date-time').textContent = flightData.dateTime || "—";
         }
 
         // Flight Log Entries
-        let flightLogEntries = [
-            { action: "Boarding", location: "FRA", time: "12:30", note: "Start" },
-            { action: "Takeoff", location: "FRA", time: "13:00", note: "Abflug" },
-            { action: "Landing", location: "FNC", time: "15:30", note: "Ankunft" }
-        ];
+        let flightLogEntries = [];
 
         function renderFlightLog() {
             const list = document.getElementById('flightlog-list');
             if (!list) return;
             list.innerHTML = '';
-            flightLogEntries.forEach(entry => {
+            flightLogEntries.forEach((entry, idx) => {
                 const card = document.createElement('div');
                 card.className = 'flightlog-card';
                 card.innerHTML = `
+                    <button onclick="deleteFlightLog(${idx})">✕</button>
                     <div><strong>Aktion:</strong> ${entry.action}</div>
                     <div><strong>Ort:</strong> ${entry.location}</div>
                     <div><strong>Zeit:</strong> ${entry.time}</div>
@@ -290,6 +342,10 @@
                 alert("Bitte Aktion, Ort und Zeit ausfüllen!");
             }
         }
+        function deleteFlightLog(idx) {
+            flightLogEntries.splice(idx, 1);
+            renderFlightLog();
+        }
 
         // Tab-Wechsel
         function showTab(tab) {
@@ -300,14 +356,14 @@
             if(tab === 'flightlog') tabs[2].classList.add('active');
             if(tab === 'documents') tabs[3].classList.add('active');
             if(tab === 'weightfuel') tabs[4].classList.add('active');
-            // Inhalt wechseln
             let content = document.getElementById('tab-content');
             if(tab === 'dashboard') {
-                content.innerHTML = `<h2>Dashboard</h2>
-                <p>Willkommen zur EFB App! Hier kannst du Flugdaten, Wetter und Dokumente ansehen.</p>
-                <div style="margin-top:18px;">
-                    <button onclick="importSimBrief()" style="background:var(--tab-active);color:#fff;padding:10px 20px;border:none;border-radius:8px;font-size:1em;">SimBrief Flug importieren</button>
-                </div>`;
+                content.innerHTML = dashboardData ? renderDashboard(dashboardData) : `
+                    <h2>Dashboard</h2>
+                    <p>Importiere einen SimBrief-Flugplan, um Details anzuzeigen.</p>
+                    <div style="margin-top:18px;">
+                        <button onclick="importSimBrief()" style="background:var(--tab-active);color:#fff;padding:10px 20px;border:none;border-radius:8px;font-size:1em;">SimBrief Flug importieren</button>
+                    </div>`;
             }
             if(tab === 'ewas') {
                 content.innerHTML = `<h2>eWAS Wetter <span style="color:#1e90ff;font-size:0.8em;">(Work in Progress)</span></h2>
@@ -337,13 +393,67 @@
                 content.innerHTML = `<h2>Documents</h2>
                 <input type="file" id="pdf-upload" accept="application/pdf" multiple style="margin-top:10px;">
                 <div class="pdf-list" id="pdf-list"></div>
-                <div id="pdf-viewer" class="pdf-placeholder">PDF-Reader Platzhalter. Hier können PDF-Dokumente angezeigt werden.</div>`;
+                <div id="pdf-viewer" class="pdf-placeholder">PDF-Reader Platzhalter. Hier können PDF-Dokumente angezeigt werden.</div>
+                <div id="pdf-fullscreen" style="display:none;"></div>`;
                 document.getElementById('pdf-upload').addEventListener('change', handlePDFUpload);
             }
             if(tab === 'weightfuel') {
                 content.innerHTML = `<h2>Weight & Fuel <span style="color:#1e90ff;font-size:0.8em;">(Work in Progress)</span></h2>
-                <div class="wip">Diagramm und Daten werden später hinzugefügt.</div>`;
+                <div class="dashboard-box">Diagramm und Daten werden später hinzugefügt.</div>`;
             }
+        }
+
+        // Dashboard-Infos aus SimBrief
+        function renderDashboard(data) {
+            return `
+            <div class="dashboard-box">
+                <div class="dashboard-title">Flight Info</div>
+                <div class="dashboard-row">
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Flight Number</span><br>
+                        <span class="dashboard-value">${data.flightNumber}</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Callsign</span><br>
+                        <span class="dashboard-value">${data.callsign}</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Departure</span><br>
+                        <span class="dashboard-value">${data.departure}</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Arrival</span><br>
+                        <span class="dashboard-value">${data.arrival}</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Aircraft</span><br>
+                        <span class="dashboard-value">${data.aircraft}</span>
+                    </div>
+                </div>
+                <div class="dashboard-row">
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Departure Date</span><br>
+                        <span class="dashboard-value">${data.departureDate}</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Departure Time</span><br>
+                        <span class="dashboard-value">${data.departureTime}</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Arrival Time</span><br>
+                        <span class="dashboard-value">${data.arrivalTime}</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dashboard-label">Air Time</span><br>
+                        <span class="dashboard-value">${data.airTime}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-box">
+                <div class="dashboard-title">Route</div>
+                <div class="dashboard-value">${data.route}</div>
+            </div>
+            `;
         }
 
         // Settings Modal
@@ -370,7 +480,6 @@
                 return;
             }
             try {
-                // SimBrief XML API
                 const url = `https://www.simbrief.com/api/xml.fetcher.php?userid=${id}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Fehler beim Abrufen von SimBrief.");
@@ -378,20 +487,27 @@
                 const parser = new DOMParser();
                 const xml = parser.parseFromString(xmlText, "application/xml");
                 // Extrahiere Daten
-                const flightNumber = xml.querySelector("general fltnumber")?.textContent || "N/A";
-                const departure = xml.querySelector("origin")?.textContent || "N/A";
-                const arrival = xml.querySelector("destination")?.textContent || "N/A";
-                const dateTime = xml.querySelector("general date")?.textContent || "N/A";
-                const aircraft = xml.querySelector("aircraft type")?.textContent || "N/A";
-                // Update Daten
                 flightData = {
-                    flightNumber,
-                    departure,
-                    arrival,
-                    dateTime,
-                    aircraft
+                    flightNumber: xml.querySelector("general fltnumber")?.textContent || "",
+                    departure: xml.querySelector("origin")?.textContent || "",
+                    arrival: xml.querySelector("destination")?.textContent || "",
+                    aircraft: xml.querySelector("aircraft type")?.textContent || "",
+                    dateTime: xml.querySelector("general date")?.textContent || ""
+                };
+                dashboardData = {
+                    flightNumber: flightData.flightNumber,
+                    callsign: xml.querySelector("general callsign")?.textContent || "",
+                    departure: xml.querySelector("origin")?.textContent || "",
+                    arrival: xml.querySelector("destination")?.textContent || "",
+                    aircraft: xml.querySelector("aircraft type")?.textContent || "",
+                    departureDate: xml.querySelector("general date")?.textContent || "",
+                    departureTime: xml.querySelector("times deptime")?.textContent || "",
+                    arrivalTime: xml.querySelector("times arrtime")?.textContent || "",
+                    airTime: xml.querySelector("times airtime")?.textContent || "",
+                    route: xml.querySelector("atcroute")?.textContent || ""
                 };
                 updateFlightInfo();
+                showTab('dashboard');
                 alert("SimBrief-Flugplan erfolgreich importiert!");
             } catch (e) {
                 alert("Import fehlgeschlagen: " + e.message);
@@ -407,7 +523,7 @@
                 const file = files[i];
                 const item = document.createElement('div');
                 item.className = 'pdf-item';
-                item.innerHTML = `<span>${file.name}</span> <button onclick="showPDF(${i})">Anzeigen</button>`;
+                item.innerHTML = `<span>${file.name}</span> <button onclick="showPDF(${i})">Vollbild</button>`;
                 list.appendChild(item);
             }
             window.uploadedPDFs = files;
@@ -417,9 +533,15 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const url = e.target.result;
-                document.getElementById('pdf-viewer').innerHTML = `<iframe src="${url}" width="100%" height="500px" style="border:none;"></iframe>`;
+                const fs = document.getElementById('pdf-fullscreen');
+                fs.innerHTML = `<button onclick="closePDF()">Schließen</button>
+                    <iframe src="${url}" allowfullscreen></iframe>`;
+                fs.style.display = 'flex';
             };
             reader.readAsDataURL(file);
+        }
+        function closePDF() {
+            document.getElementById('pdf-fullscreen').style.display = 'none';
         }
 
         // Wetter abrufen (Demo)
@@ -440,13 +562,11 @@
                 if (!canvas) return;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                // Achsen
                 ctx.strokeStyle = "#bfc9db";
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(40, 20); ctx.lineTo(40, 160); ctx.lineTo(380, 160);
                 ctx.stroke();
-                // Dummy-Daten
                 ctx.strokeStyle = "#1e90ff";
                 ctx.lineWidth = 3;
                 ctx.beginPath();
@@ -456,14 +576,12 @@
                 ctx.lineTo(260, 100);
                 ctx.lineTo(340, 50);
                 ctx.stroke();
-                // Punkte
                 ctx.fillStyle = "#1e90ff";
                 [120,80,60,100,50].forEach((y,i) => {
                     ctx.beginPath();
                     ctx.arc(40+60*i, y, 6, 0, 2*Math.PI);
                     ctx.fill();
                 });
-                // Labels
                 ctx.fillStyle = "#fff";
                 ctx.font = "16px Segoe UI";
                 ctx.fillText("Temp.", 10, 30);
@@ -493,8 +611,8 @@
             <span class="info-box" id="flight-number"></span>
             <span class="info-box" id="departure"></span>
             <span class="info-box" id="arrival"></span>
-            <span class="info-box" id="date-time"></span>
             <span class="info-box" id="aircraft"></span>
+            <span class="info-box" id="date-time"></span>
         </div>
         <div class="settings">
             <button title="Einstellungen" onclick="openSettings()">⚙️</button>
@@ -511,7 +629,7 @@
     <div class="content" id="tab-content">
         <!-- Inhalt wird per JS geladen -->
     </div>
-
+    <div id="pdf-fullscreen" style="display:none;"></div>
     <!-- Settings Modal -->
     <div id="settings-modal">
         <div class="modal-content">
@@ -523,3 +641,4 @@
         </div>
     </div>
 </body>
+</html>

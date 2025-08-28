@@ -191,37 +191,6 @@
             font-size: 0.9em;
             cursor: pointer;
         }
-        .dashboard-box {
-            background: #222b3a;
-            border-radius: 12px;
-            padding: 18px 24px;
-            margin-bottom: 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-        }
-        .dashboard-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #bfc9db;
-        }
-        .dashboard-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            margin-bottom: 10px;
-        }
-        .dashboard-item {
-            min-width: 120px;
-            margin-bottom: 8px;
-        }
-        .dashboard-label {
-            color: #bfc9db;
-            font-size: 0.95em;
-        }
-        .dashboard-value {
-            font-size: 1.1em;
-            font-weight: bold;
-        }
         /* Modal Styles */
         #settings-modal {
             display:none;
@@ -295,7 +264,6 @@
             aircraft: "",
             dateTime: ""
         };
-        let dashboardData = null;
 
         function updateFlightInfo() {
             document.getElementById('flight-number').textContent = flightData.flightNumber || "—";
@@ -358,12 +326,19 @@
             if(tab === 'weightfuel') tabs[4].classList.add('active');
             let content = document.getElementById('tab-content');
             if(tab === 'dashboard') {
-                content.innerHTML = dashboardData ? renderDashboard(dashboardData) : `
+                content.innerHTML = `
                     <h2>Dashboard</h2>
-                    <p>Importiere einen SimBrief-Flugplan, um Details anzuzeigen.</p>
+                    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;">
+                        <span class="info-box">${flightData.flightNumber || "—"}</span>
+                        <span class="info-box">${flightData.departure || "—"}</span>
+                        <span class="info-box">${flightData.arrival || "—"}</span>
+                        <span class="info-box">${flightData.aircraft || "—"}</span>
+                        <span class="info-box">${flightData.dateTime || "—"}</span>
+                    </div>
                     <div style="margin-top:18px;">
                         <button onclick="importSimBrief()" style="background:var(--tab-active);color:#fff;padding:10px 20px;border:none;border-radius:8px;font-size:1em;">SimBrief Flug importieren</button>
-                    </div>`;
+                    </div>
+                `;
             }
             if(tab === 'ewas') {
                 content.innerHTML = `<h2>eWAS Wetter <span style="color:#1e90ff;font-size:0.8em;">(Work in Progress)</span></h2>
@@ -399,61 +374,8 @@
             }
             if(tab === 'weightfuel') {
                 content.innerHTML = `<h2>Weight & Fuel <span style="color:#1e90ff;font-size:0.8em;">(Work in Progress)</span></h2>
-                <div class="dashboard-box">Diagramm und Daten werden später hinzugefügt.</div>`;
+                <div class="info-box">Diagramm und Daten werden später hinzugefügt.</div>`;
             }
-        }
-
-        // Dashboard-Infos aus SimBrief
-        function renderDashboard(data) {
-            return `
-            <div class="dashboard-box">
-                <div class="dashboard-title">Flight Info</div>
-                <div class="dashboard-row">
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Flight Number</span><br>
-                        <span class="dashboard-value">${data.flightNumber}</span>
-                    </div>
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Callsign</span><br>
-                        <span class="dashboard-value">${data.callsign}</span>
-                    </div>
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Departure</span><br>
-                        <span class="dashboard-value">${data.departure}</span>
-                    </div>
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Arrival</span><br>
-                        <span class="dashboard-value">${data.arrival}</span>
-                    </div>
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Aircraft</span><br>
-                        <span class="dashboard-value">${data.aircraft}</span>
-                    </div>
-                </div>
-                <div class="dashboard-row">
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Departure Date</span><br>
-                        <span class="dashboard-value">${data.departureDate}</span>
-                    </div>
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Departure Time</span><br>
-                        <span class="dashboard-value">${data.departureTime}</span>
-                    </div>
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Arrival Time</span><br>
-                        <span class="dashboard-value">${data.arrivalTime}</span>
-                    </div>
-                    <div class="dashboard-item">
-                        <span class="dashboard-label">Air Time</span><br>
-                        <span class="dashboard-value">${data.airTime}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="dashboard-box">
-                <div class="dashboard-title">Route</div>
-                <div class="dashboard-value">${data.route}</div>
-            </div>
-            `;
         }
 
         // Settings Modal
@@ -494,18 +416,6 @@
                     aircraft: xml.querySelector("aircraft type")?.textContent || "",
                     dateTime: xml.querySelector("general date")?.textContent || ""
                 };
-                dashboardData = {
-                    flightNumber: flightData.flightNumber,
-                    callsign: xml.querySelector("general callsign")?.textContent || "",
-                    departure: xml.querySelector("origin")?.textContent || "",
-                    arrival: xml.querySelector("destination")?.textContent || "",
-                    aircraft: xml.querySelector("aircraft type")?.textContent || "",
-                    departureDate: xml.querySelector("general date")?.textContent || "",
-                    departureTime: xml.querySelector("times deptime")?.textContent || "",
-                    arrivalTime: xml.querySelector("times arrtime")?.textContent || "",
-                    airTime: xml.querySelector("times airtime")?.textContent || "",
-                    route: xml.querySelector("atcroute")?.textContent || ""
-                };
                 updateFlightInfo();
                 showTab('dashboard');
                 alert("SimBrief-Flugplan erfolgreich importiert!");
@@ -534,14 +444,23 @@
             reader.onload = function(e) {
                 const url = e.target.result;
                 const fs = document.getElementById('pdf-fullscreen');
-                fs.innerHTML = `<button onclick="closePDF()">Schließen</button>
-                    <iframe src="${url}" allowfullscreen></iframe>`;
-                fs.style.display = 'flex';
+                fs.innerHTML = `<button onclick="closePDF()" style="position:absolute;top:16px;right:16px;z-index:10;background:#1e90ff;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:1em;">Schließen</button>
+                    <iframe src="${url}" style="width:100vw;height:100vh;border:none;position:absolute;top:0;left:0;"></iframe>`;
+                fs.style.display = 'block';
+                fs.style.position = 'fixed';
+                fs.style.top = '0';
+                fs.style.left = '0';
+                fs.style.width = '100vw';
+                fs.style.height = '100vh';
+                fs.style.background = '#222b3a';
+                fs.style.zIndex = '2000';
             };
             reader.readAsDataURL(file);
         }
         function closePDF() {
-            document.getElementById('pdf-fullscreen').style.display = 'none';
+            const fs = document.getElementById('pdf-fullscreen');
+            fs.style.display = 'none';
+            fs.innerHTML = '';
         }
 
         // Wetter abrufen (Demo)
@@ -635,10 +554,4 @@
         <div class="modal-content">
             <h2>Einstellungen</h2>
             <label for="simbrief-id">SimBrief ID:</label>
-            <input type="text" id="simbrief-id" placeholder="Deine SimBrief ID">
-            <button onclick="saveSettings()">Speichern</button>
-            <button onclick="closeSettings()">Schließen</button>
-        </div>
-    </div>
-</body>
-</html>
+            <input type="text" id="simbrief-id" placeholder

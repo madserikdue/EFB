@@ -1,169 +1,442 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MeBriefing EFB</title>
-
-<!-- Manifest -->
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABJklEQVRYR+2WsQ3CMAxFe0SQh6A0sQd3E4hn0tTnQeX0pGjH4Dn3tWIZYAD9IYy0ngGlm4Ah4AOqA0Wrhu4BAoAA3wHQW0mQAxQ0dE7i9b8c6SUp3Mi9Of9kbPY7kcOAwHh5BhNGE4kFmHg3FmyDl+9yE1kXUgjY9AG7sG3vQpZXwX1W4Qb4cLrAMnB3wRY8LfXxOCVtwnXbObnIN4NKh+kIK/l92l8GuAfE4lEDr9/UQQu0DOIh0Eo5WhLfwfId5t/8sXwA+HkX8FfNc4AAAAASUVORK5CYII=">
-
-<style>
-:root{
-  --bg:#0a0f1a;         
-  --tab:#13294a;        
-  --tab-active:#1c3a70; 
-  --accent:#1e90ff;     
-  --text:#e6eef8;
-  --card:#0f1a2a;
-}
-body {margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);}
-header {display:flex;justify-content:space-between;align-items:center;background:var(--tab);padding:10px;}
-header .flight-info span {margin-right:15px;font-weight:600;}
-nav {display:flex;background:var(--tab);}
-nav button {flex:1;padding:10px;border:none;background:var(--tab);color:var(--text);cursor:pointer;font-weight:600;transition:background 0.2s;}
-nav button.active {background:var(--tab-active);}
-.tab {display:none;height:calc(100vh - 90px);padding:10px;}
-.tab.active {display:block;}
-#map {width:100%;height:100%;}
-textarea,input {width:100%;margin:5px 0;padding:8px;border-radius:6px;border:none;background:#0f1a2a;color:var(--text);}
-button {padding:8px 12px;margin:5px 0;background:var(--accent);border:none;border-radius:6px;color:white;cursor:pointer;}
-.log-tabs {display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.log-tab {padding:5px 10px;background:var(--tab);border-radius:5px;cursor:pointer;}
-.log-tab.active {background:var(--tab-active);}
-iframe {border:none;}
-</style>
+    <meta charset="UTF-8">
+    <title>EFB Modern</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #1e2a3a;
+            --accent: #1e90ff;
+            --bg: #0a2342;
+            --card: #bfc9db;
+            --text: #fff;
+            --muted: #bfc9db;
+            --radius: 32px;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            margin: 0;
+        }
+        .topbar {
+            background: var(--primary);
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            position: relative;
+        }
+        .topbar .plane {
+            font-size: 2.2em;
+            margin-right: 12px;
+        }
+        .topbar .info-row {
+            display: flex;
+            gap: 28px;
+            align-items: center;
+            flex: 1;
+        }
+        .topbar .info-label {
+            color: var(--muted);
+            font-size: 0.95em;
+            font-weight: 500;
+            display: block;
+        }
+        .topbar .info-value {
+            color: var(--text);
+            font-size: 1.08em;
+            font-weight: 600;
+            display: block;
+        }
+        .topbar .load-btn {
+            background: #4fd17c;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 28px;
+            font-size: 1.08em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 24px;
+            box-shadow: 0 2px 8px rgba(30,144,255,0.10);
+            transition: background 0.2s;
+        }
+        .topbar .load-btn:hover {
+            background: #2fa85a;
+        }
+        .topbar .settings {
+            position: absolute;
+            right: 24px;
+            top: 18px;
+            font-size: 1.6em;
+            cursor: pointer;
+            color: var(--muted);
+        }
+        .nav {
+            background: var(--primary);
+            display: flex;
+            gap: 2px;
+            padding: 0 16px;
+            border-bottom: 2px solid #233;
+        }
+        .nav-btn {
+            flex: 1;
+            padding: 18px 0 14px 0;
+            text-align: center;
+            color: var(--muted);
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            background: var(--primary);
+            font-size: 1.08em;
+            letter-spacing: 1px;
+            transition: background 0.2s, border-bottom 0.2s, color 0.2s;
+            user-select: none;
+        }
+        .nav-btn.active {
+            border-bottom: 3px solid var(--accent);
+            background: #233;
+            color: var(--accent);
+        }
+        .main {
+            padding: 32px 24px;
+            min-height: 70vh;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 48px;
+            justify-content: center;
+            align-items: center;
+        }
+        .card-btn {
+            background: var(--card);
+            color: #222;
+            border-radius: var(--radius);
+            padding: 48px 64px;
+            font-size: 2em;
+            font-weight: 500;
+            text-align: center;
+            margin: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(30,144,255,0.10);
+            border: none;
+            transition: background 0.2s, color 0.2s;
+        }
+        .card-btn:hover {
+            background: #e3eaf7;
+            color: var(--accent);
+        }
+        @media (max-width: 900px) {
+            .main { gap: 24px; }
+            .card-btn { padding: 32px 24px; font-size: 1.3em; }
+            .topbar .info-row { gap: 12px; }
+        }
+        @media (max-width: 600px) {
+            .main { flex-direction: column; gap: 18px; }
+            .card-btn { padding: 18px 10px; font-size: 1em; }
+            .topbar { flex-direction: column; gap: 8px; padding: 12px 8px; }
+            .topbar .settings { right: 8px; top: 12px; }
+        }
+    </style>
 </head>
 <body>
+    <div class="topbar">
+        <span class="plane">✈️</span>
+        <div class="info-row">
+            <div>
+                <span class="info-label">Flugnummer</span>
+                <span class="info-value" id="flight-number">—</span>
+            </div>
+            <div>
+                <span class="info-label">Departure<br>Airport</span>
+                <span class="info-value" id="departure">—</span>
+            </div>
+            <div>
+                <span class="info-label">Arrival<br>Airport</span>
+                <span class="info-value" id="arrival">—</span>
+            </div>
+            <div>
+                <span class="info-label">Datum/<br>Uhrzeit</span>
+                <span class="info-value" id="datetime">—</span>
+            </div>
+            <div>
+                <span class="info-label">Flugzeug<br>Typ</span>
+                <span class="info-value" id="aircraft">—</span>
+            </div>
+            <button class="load-btn" onclick="loadFlight()">Flug Laden</button>
+        </div>
+        <span class="settings" onclick="openSettings()">⚙️</span>
+    </div>
+    <div class="nav">
+        <div class="nav-btn active" onclick="showTab('home')">Home</div>
+        <div class="nav-btn" onclick="showTab('dashboard')">Dashboard</div>
+        <div class="nav-btn" onclick="showTab('dokumente')">Dokumente</div>
+        <div class="nav-btn" onclick="showTab('route')">Route</div>
+        <div class="nav-btn" onclick="window.open('https://planner.flightsimulator.com','_blank')">Charts</div>
+        <div class="nav-btn" onclick="showTab('logbuch')">Logbuch</div>
+    </div>
+    <div class="main" id="main">
+        <button class="card-btn" onclick="showTab('dashboard')"><i>Dashboard</i></button>
+        <button class="card-btn" onclick="showTab('dokumente')"><i>Dokumente</i></button>
+        <button class="card-btn" onclick="showTab('route')"><i>Route</i></button>
+        <button class="card-btn" onclick="window.open('https://planner.flightsimulator.com','_blank')"><i>Charts</i></button>
+        <button class="card-btn" onclick="showTab('logbuch')"><i>Logbuch</i></button>
+    </div>
+    <!-- Settings Modal -->
+    <div id="settings-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);z-index:1000;">
+        <div style="background:#fff;color:#222;max-width:400px;margin:80px auto;padding:30px;border-radius:24px;position:relative;">
+            <h2>Einstellungen</h2>
+            <label for="simbrief-id">SimBrief ID:</label>
+            <input type="text" id="simbrief-id" placeholder="Deine SimBrief ID" style="width:100%;padding:8px;margin-bottom:16px;border-radius:8px;border:1px solid #ccc;font-size:1em;">
+            <button onclick="saveSettings()" style="background:#1e90ff;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:1em;cursor:pointer;margin-right:8px;">Speichern</button>
+            <button onclick="closeSettings()" style="background:#aaa;color:#222;border:none;padding:8px 18px;border-radius:8px;font-size:1em;cursor:pointer;">Schließen</button>
+        </div>
+    </div>
+    <script>
+        // Dynamische Zeit
+        function updateDateTime() {
+            const now = new Date();
+            const d = now.toLocaleDateString('de-DE');
+            const t = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('datetime').textContent = `${d} ${t}`;
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
 
-<header>
-  <div class="flight-info">
-    <span id="flightNumber">Flug: ---</span>
-    <span id="dep">DEP: ---</span>
-    <span id="arr">ARR: ---</span>
-    <span id="aircraft">ACFT: ---</span>
-    <span id="reg">REG: ---</span>
-  </div>
-  <div id="clock">--:--:--</div>
-</header>
+        // Tab-Wechsel
+        function showTab(tab) {
+            document.querySelectorAll('.nav-btn').forEach(t => t.classList.remove('active'));
+            if(tab === 'home') document.querySelectorAll('.nav-btn')[0].classList.add('active');
+            if(tab === 'dashboard') document.querySelectorAll('.nav-btn')[1].classList.add('active');
+            if(tab === 'dokumente') document.querySelectorAll('.nav-btn')[2].classList.add('active');
+            if(tab === 'route') document.querySelectorAll('.nav-btn')[3].classList.add('active');
+            if(tab === 'logbuch') document.querySelectorAll('.nav-btn')[5].classList.add('active');
+            const main = document.getElementById('main');
+            if(tab === 'home') {
+                main.innerHTML = `
+                    <button class="card-btn" onclick="showTab('dashboard')"><i>Dashboard</i></button>
+                    <button class="card-btn" onclick="showTab('dokumente')"><i>Dokumente</i></button>
+                    <button class="card-btn" onclick="showTab('route')"><i>Route</i></button>
+                    <button class="card-btn" onclick="window.open('https://planner.flightsimulator.com','_blank')"><i>Charts</i></button>
+                    <button class="card-btn" onclick="showTab('logbuch')"><i>Logbuch</i></button>
+                `;
+            }
+            if(tab === 'dashboard') {
+                main.innerHTML = `
+                    <div style="display:flex;flex-wrap:wrap;gap:32px;justify-content:center;">
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Flugnummer</div>
+                            <div style="font-size:1.5em;font-weight:700;" id="dash-fltnumber">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Departure</div>
+                            <div style="font-size:1.5em;font-weight:700;" id="dash-departure">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Arrival</div>
+                            <div style="font-size:1.5em;font-weight:700;" id="dash-arrival">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Flugzeug</div>
+                            <div style="font-size:1.5em;font-weight:700;" id="dash-aircraft">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Flugzeit</div>
+                            <div style="font-size:1.5em;font-weight:700;" id="dash-airtime">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Route</div>
+                            <div style="font-size:1em;font-weight:700;" id="dash-route">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Gewichte</div>
+                            <div style="font-size:1em;font-weight:700;" id="dash-weight">—</div>
+                        </div>
+                    </div>
+                `;
+                // Hier werden die Daten aus SimBrief eingetragen
+                setDashboardInfos();
+            }
+            if(tab === 'dokumente') {
+                main.innerHTML = `
+                    <input type="file" id="pdf-upload" accept="application/pdf" multiple style="margin-top:10px;">
+                    <div class="pdf-list" id="pdf-list"></div>
+                    <div id="pdf-fullscreen" class="pdf-fullscreen" style="display:none;"></div>
+                `;
+                document.getElementById('pdf-upload').addEventListener('change', handlePDFUpload);
+            }
+            if(tab === 'route') {
+                main.innerHTML = `
+                    <div id="map" style="width:100%;height:70vh;border-radius:24px;box-shadow:0 2px 8px rgba(30,144,255,0.10);"></div>
+                `;
+                loadMap();
+            }
+            if(tab === 'logbuch') {
+                main.innerHTML = `
+                    <div style="display:flex;flex-wrap:wrap;gap:32px;justify-content:center;">
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Block</div>
+                            <div style="font-size:1em;font-weight:700;" id="log-block">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Takeoff</div>
+                            <div style="font-size:1em;font-weight:700;" id="log-takeoff">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Landing</div>
+                            <div style="font-size:1em;font-weight:700;" id="log-landing">—</div>
+                        </div>
+                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
+                            <div style="font-size:1.1em;color:#1e90ff;">Bemerkung</div>
+                            <div style="font-size:1em;font-weight:700;" id="log-note">—</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
 
-<nav>
-  <button onclick="openTab(event,'dashboard')" class="active">Dashboard</button>
-  <button onclick="openTab(event,'docs')">Docs</button>
-  <button onclick="openTab(event,'map')">Map</button>
-  <button onclick="openTab(event,'charts')">Charts</button>
-  <button onclick="openTab(event,'logbook')">Logbook</button>
-  <button onclick="openTab(event,'settings')">Settings</button>
-</nav>
+        // Dummy: SimBrief Daten eintragen (hier ersetzen durch echten Import)
+        function setDashboardInfos() {
+            document.getElementById('dash-fltnumber').textContent = window.simbrief?.flightNumber || "DLH344";
+            document.getElementById('dash-departure').textContent = window.simbrief?.departure || "EDDM";
+            document.getElementById('dash-arrival').textContent = window.simbrief?.arrival || "EDDL";
+            document.getElementById('dash-aircraft').textContent = window.simbrief?.aircraft || "A350-900";
+            document.getElementById('dash-airtime').textContent = window.simbrief?.airTime || "00:50";
+            document.getElementById('dash-route').textContent = window.simbrief?.route || "EDDM/26L N0452F320 GIVM65 ... EDDL/23L";
+            document.getElementById('dash-weight').textContent = window.simbrief?.blockFuel ? `Block Fuel: ${window.simbrief.blockFuel}` : "Block Fuel: 12.444 kg";
+        }
 
-<div id="dashboard" class="tab active">
-  <h2>Flugübersicht</h2>
-  <div id="dashboard-content">Bitte Flugplan laden.</div>
-</div>
+        // PDF Reader
+        let pdfDoc = null, pdfPageNum = 1, pdfTotalPages = 1, pdfFileUrl = null;
+        function handlePDFUpload(event) {
+            const files = event.target.files;
+            const list = document.getElementById('pdf-list');
+            list.innerHTML = '';
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const item = document.createElement('div');
+                item.className = 'pdf-item';
+                item.innerHTML = `<span>${file.name}</span> <button onclick="showPDF(${i})">Vollbild</button>`;
+                list.appendChild(item);
+            }
+            window.uploadedPDFs = files;
+        }
+        function showPDF(index) {
+            const file = window.uploadedPDFs[index];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                pdfFileUrl = e.target.result;
+                openPDFViewer(pdfFileUrl);
+            };
+            reader.readAsDataURL(file);
+        }
+        function openPDFViewer(url) {
+            const fs = document.getElementById('pdf-fullscreen');
+            fs.style.display = 'flex';
+            fs.innerHTML = `
+                <div class="pdf-controls">
+                    <button onclick="closePDF()">Schließen</button>
+                    <button onclick="prevPDFPage()">&#8592;</button>
+                    <span id="pdf-page-info"></span>
+                    <button onclick="nextPDFPage()">&#8594;</button>
+                </div>
+                <canvas id="pdf-canvas"></canvas>
+            `;
+            loadPDF(url);
+        }
+        function closePDF() {
+            document.getElementById('pdf-fullscreen').style.display = 'none';
+            pdfDoc = null;
+            pdfFileUrl = null;
+        }
+        function loadPDF(url) {
+            pdfjsLib.getDocument(url).promise.then(function(doc) {
+                pdfDoc = doc;
+                pdfTotalPages = doc.numPages;
+                pdfPageNum = 1;
+                renderPDFPage(pdfPageNum);
+            });
+        }
+        function renderPDFPage(num) {
+            pdfDoc.getPage(num).then(function(page) {
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.getElementById('pdf-canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                page.render({ canvasContext: context, viewport: viewport });
+                document.getElementById('pdf-page-info').textContent = `Seite ${num}/${pdfTotalPages}`;
+            });
+        }
+        function prevPDFPage() {
+            if (pdfPageNum > 1) { pdfPageNum--; renderPDFPage(pdfPageNum); }
+        }
+        function nextPDFPage() {
+            if (pdfPageNum < pdfTotalPages) { pdfPageNum++; renderPDFPage(pdfPageNum); }
+        }
 
-<div id="docs" class="tab">
-  <h2>PDF Viewer</h2>
-  <input type="file" id="pdf-file" accept="application/pdf">
-  <iframe id="pdf-frame" src="" style="width:100%;height:90%;"></iframe>
-</div>
+        // Dummy: Hochwertige Moving Map (Leaflet.js Beispiel)
+        function loadMap() {
+            if (window.L) return; // Nur einmal laden
+            const script = document.createElement('script');
+            script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+            document.body.appendChild(script);
+            const link = document.createElement('link');
+            link.rel = "stylesheet";
+            link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+            document.head.appendChild(link);
+            script.onload = () => {
+                const mapDiv = document.getElementById('map');
+                const map = L.map(mapDiv).setView([50, 10], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                // Dummy Route
+                const route = [
+                    [48.3538, 11.7861], // EDDM
+                    [51.2895, 6.7668]   // EDDL
+                ];
+                L.polyline(route, {color: "#1e90ff", weight: 5}).addTo(map);
+                L.marker(route[0]).addTo(map).bindPopup("Departure: EDDM");
+                L.marker(route[1]).addTo(map).bindPopup("Arrival: EDDL");
+            };
+        }
 
-<div id="map" class="tab">
-  <div id="map"></div>
-</div>
+        // Settings Modal
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'block';
+            document.getElementById('simbrief-id').value = localStorage.getItem('simbriefId') || '';
+        }
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+        function saveSettings() {
+            const id = document.getElementById('simbrief-id').value;
+            localStorage.setItem('simbriefId', id);
+            alert('SimBrief ID gespeichert!');
+            closeSettings();
+        }
 
-<div id="charts" class="tab">
-  <h2>Charts</h2>
-  <button onclick="window.open('https://planner.flightsimulator.com','_blank')">Charts öffnen</button>
-</div>
+        // Flug Laden Dummy
+        function loadFlight() {
+            // Hier SimBrief API laden und window.simbrief füllen
+            window.simbrief = {
+                flightNumber: "DLH344",
+                departure: "EDDM",
+                arrival: "EDDL",
+                aircraft: "A350-900",
+                airTime: "00:50",
+                route: "EDDM/26L N0452F320 GIVM65 ... EDDL/23L",
+                blockFuel: "12.444 kg"
+            };
+            document.getElementById('flight-number').textContent = window.simbrief.flightNumber;
+            document.getElementById('departure').textContent = window.simbrief.departure;
+            document.getElementById('arrival').textContent = window.simbrief.arrival;
+            document.getElementById('aircraft').textContent = window.simbrief.aircraft;
+            showTab('dashboard');
+        }
 
-<div id="logbook" class="tab">
-  <div class="log-tabs" id="log-tabs"></div>
-  <div id="log-content"><p>Wähle einen Flug oder lade einen SimBrief-Plan.</p></div>
-</div>
-
-<div id="settings" class="tab">
-  <h2>Settings</h2>
-  <label>SimBrief Username:</label>
-  <input type="text" id="simbriefId"><br>
-  <button onclick="loadFlight()">Flugplan laden</button>
-</div>
-
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-// === Tabs ===
-function openTab(e,id){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  e.currentTarget.classList.add('active');
-}
-
-// === Clock ===
-function updateClock(){ const now=new Date(); document.getElementById("clock").textContent=now.toLocaleTimeString(); }
-setInterval(updateClock,1000); updateClock();
-
-// === Map ===
-var map=L.map('map').setView([50,10],4);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-  attribution:'&copy; OpenStreetMap &copy; Carto',subdomains:'abcd',maxZoom:19
-}).addTo(map);
-var routeLayer=L.polyline([],{color:'#1e90ff',weight:4}).addTo(map);
-var markerLayer=L.layerGroup().addTo(map);
-
-// === PDF Viewer ===
-document.getElementById('pdf-file').addEventListener('change',function(e){
-  const file=e.target.files[0];
-  if(file) document.getElementById('pdf-frame').src=URL.createObjectURL(file);
-});
-
-// === Logbook ===
-var logs=JSON.parse(localStorage.getItem("mebrief_logs")||"{}");
-var currentFlight=null;
-function renderLogTabs(){
-  const tabs=document.getElementById("log-tabs"); tabs.innerHTML="";
-  for(const flight in logs){
-    const b=document.createElement("div");
-    b.className="log-tab"+(flight===currentFlight?" active":""); b.textContent=flight;
-    b.onclick=()=>{ currentFlight=flight; renderLogContent(); renderLogTabs();}
-    tabs.appendChild(b);
-  }
-}
-function renderLogContent(){
-  const c=document.getElementById("log-content");
-  if(!currentFlight){ c.innerHTML="<p>Wähle einen Flug aus.</p>"; return;}
-  let l=logs[currentFlight]||"";
-  c.innerHTML=`<textarea id="logarea" rows="10">${l}</textarea><br>
-  <button onclick="saveCurrentLog()">Speichern</button>`;
-}
-function saveCurrentLog(){
-  const val=document.getElementById("logarea").value;
-  logs[currentFlight]=val;
-  localStorage.setItem("mebrief_logs",JSON.stringify(logs));
-  alert("Gespeichert!");
-}
-renderLogTabs();
-
-// === SimBrief Loader ===
-async function loadFlight(){
-  const id=document.getElementById("simbriefId").value.trim();
-  if(!id){alert("Bitte SimBrief ID eingeben."); return;}
-  localStorage.setItem("simbriefId",id);
-  // Beispiel: hier kann man XML API parsen, aktuell Dummy-Flug
-  const flightNum="AB123"; const dep="EGLL"; const arr="EHAM"; const acft="A320"; const reg="D-ABCD";
-  document.getElementById("flightNumber").textContent="Flug: "+flightNum;
-  document.getElementById("dep").textContent="DEP: "+dep;
-  document.getElementById("arr").textContent="ARR: "+arr;
-  document.getElementById("aircraft").textContent="ACFT: "+acft;
-  document.getElementById("reg").textContent="REG: "+reg;
-  document.getElementById("dashboard-content").innerHTML=`<ul><li>${flightNum}</li><li>${dep}</li><li>${arr}</li><li>${acft}</li><li>${reg}</li></ul>`;
-  // Route Beispiel
-  const route=[[51.4775,-0.4614],[52.3105,4.7683]]; routeLayer.setLatLngs(route);
-  markerLayer.clearLayers();
-  route.forEach((p,i)=>{L.marker(p).addTo(markerLayer).bindPopup("WP "+(i+1));});
-  // Logbook Tab erstellen
-  currentFlight=flightNum; if(!logs[flightNum]) logs[flightNum]=""; renderLogTabs(); renderLogContent();
-}
-</script>
-</body>
-</html>
+        window.onload = () => {
+            showTab('home');

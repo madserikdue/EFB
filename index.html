@@ -4,45 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeBriefing EFB</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Inline Manifest für PWA + App Icon -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABJklEQVRYR+2WsQ3CMAxFe0SQh6A0sQd3E4hn0tTnQeX0pGjH4Dn3tWIZYAD9IYy0ngGlm4Ah4AOqA0Wrhu4BAoAA3wHQW0mQAxQ0dE7i9b8c6SUp3Mi9Of9kbPY7kcOAwHh5BhNGE4kFmHg3FmyDl+9yE1kXUgjY9AG7sG3vQpZXwX1W4Qb4cLrAMnB3wRY8LfXxOCVtwnXbObnIN4NKh+kIK/l92l8GuAfE4lEDr9/UQQu0DOIh0Eo5WhLfwfId5t/8sXwA+HkX8FfNc4AAAAASUVORK5CYII=">
+
 <style>
-/* --- Farben --- */
 :root{
-  --bg:#0a0f1a;          /* Dunkelblau Hintergrund */
-  --tab:#13294a;         /* Tabs dunkelblau */
-  --tab-active:#1c3a70;  /* Aktiver Tab etwas heller */
-  --accent:#1e90ff;      /* Akzentfarbe */
+  --bg:#0a0f1a;         
+  --tab:#13294a;        
+  --tab-active:#1c3a70; 
+  --accent:#1e90ff;     
   --text:#e6eef8;
   --card:#0f1a2a;
 }
-body {
-  margin:0; font-family:Arial,sans-serif; background:var(--bg); color:var(--text);
-}
-header {
-  display:flex;justify-content:space-between;align-items:center;
-  background:var(--tab); padding:10px;
-}
+body {margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);}
+header {display:flex;justify-content:space-between;align-items:center;background:var(--tab);padding:10px;}
 header .flight-info span {margin-right:15px;font-weight:600;}
-nav {
-  display:flex;
-  background:var(--tab);
-}
-nav button {
-  flex:1; padding:10px; border:none; background:var(--tab); color:var(--text);
-  cursor:pointer; font-weight:600; transition: background 0.2s;
-}
+nav {display:flex;background:var(--tab);}
+nav button {flex:1;padding:10px;border:none;background:var(--tab);color:var(--text);cursor:pointer;font-weight:600;transition:background 0.2s;}
 nav button.active {background:var(--tab-active);}
-.tab {
-  display:none; height:calc(100vh - 90px); padding:10px;
-}
+.tab {display:none;height:calc(100vh - 90px);padding:10px;}
 .tab.active {display:block;}
-#map {width:100%; height:100%;}
+#map {width:100%;height:100%;}
 textarea,input {width:100%;margin:5px 0;padding:8px;border-radius:6px;border:none;background:#0f1a2a;color:var(--text);}
 button {padding:8px 12px;margin:5px 0;background:var(--accent);border:none;border-radius:6px;color:white;cursor:pointer;}
 .log-tabs {display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
 .log-tab {padding:5px 10px;background:var(--tab);border-radius:5px;cursor:pointer;}
 .log-tab.active {background:var(--tab-active);}
+iframe {border:none;}
 </style>
 </head>
 <body>
@@ -69,12 +59,12 @@ button {padding:8px 12px;margin:5px 0;background:var(--accent);border:none;borde
 
 <div id="dashboard" class="tab active">
   <h2>Flugübersicht</h2>
-  <div id="dashboard-content">Lade Flugdaten...</div>
+  <div id="dashboard-content">Bitte Flugplan laden.</div>
 </div>
 
 <div id="docs" class="tab">
   <h2>PDF Viewer</h2>
-  <iframe id="pdf-frame" src="" style="width:100%;height:90%;border:none;"></iframe>
+  <iframe id="pdf-frame" src="" style="width:100%;height:90%;"></iframe>
 </div>
 
 <div id="map" class="tab">
@@ -98,6 +88,7 @@ button {padding:8px 12px;margin:5px 0;background:var(--accent);border:none;borde
   <button onclick="loadFlight()">Flugplan laden</button>
 </div>
 
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 // Tabs
 function openTab(id){
@@ -112,15 +103,13 @@ function openTab(id){
 function updateClock(){ const now=new Date(); document.getElementById("clock").textContent=now.toLocaleTimeString(); }
 setInterval(updateClock,1000); updateClock();
 
-// Settings
-document.getElementById("simbriefId").value=localStorage.getItem("simbriefId")||"";
-
 // Map
 var map=L.map('map').setView([50,10],4);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
   attribution:'&copy; OpenStreetMap &copy; Carto',subdomains:'abcd',maxZoom:19
 }).addTo(map);
-var routeLayer, markerLayer=L.layerGroup().addTo(map);
+var routeLayer=L.polyline([],{color:'#1e90ff',weight:4}).addTo(map);
+var markerLayer=L.layerGroup().addTo(map);
 
 // Logbook
 var logs=JSON.parse(localStorage.getItem("mebrief_logs")||"{}");
@@ -148,15 +137,18 @@ function saveCurrentLog(){
   alert("Gespeichert!");
 }
 
-// SimBrief Fetch auf Knopfdruck
+// Load SimBrief
 async function loadFlight(){
   const id=document.getElementById("simbriefId").value.trim();
   if(!id){alert("Bitte SimBrief ID eingeben."); return;}
   localStorage.setItem("simbriefId",id);
-  const url=`https://www.simbrief.com/api/xml.fetcher.php?username=${id}`;
+
   try{
-    const resp=await fetch(url); const text=await resp.text();
+    const url=`https://www.simbrief.com/api/xml.fetcher.php?username=${id}`;
+    const resp=await fetch(url); 
+    const text=await resp.text();
     const xml=new DOMParser().parseFromString(text,"text/xml");
+
     const flightNum=xml.querySelector("atcflightnumber")?.textContent||"---";
     const dep=xml.querySelector("origin")?.getAttribute("icao_code")||"---";
     const arr=xml.querySelector("destination")?.getAttribute("icao_code")||"---";
@@ -168,14 +160,4 @@ async function loadFlight(){
     document.getElementById("aircraft").textContent="ACFT: "+acft;
     document.getElementById("reg").textContent="REG: "+reg;
     document.getElementById("dashboard-content").innerHTML=`<ul>
-      <li>Flight: ${flightNum}</li><li>DEP: ${dep}</li><li>ARR: ${arr}</li>
-      <li>ACFT: ${acft}</li><li>REG: ${reg}</li></ul>`;
-
-    // PDF auf Knopfdruck
-    document.getElementById("pdf-frame").src=""; 
-    if(confirm("PDF jetzt anzeigen?")) 
-      document.getElementById("pdf-frame").src=`https://www.simbrief.com/ofp/flightplans/${id}.pdf`;
-
-    // Map
-    const navs=xml.querySelectorAll("navlog_fix"); let coords=[];
-    navs.forEach(n=>{ const lat=parseFloat(n.get
+      <li>Flight: ${flightNum}</li><li>DEP: ${dep}</li><li>ARR

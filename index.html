@@ -1,404 +1,148 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <title>EFB Modern</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        :root {
-            --primary: #1e2a3a;
-            --accent: #1e90ff;
-            --bg: #181f2a;
-            --card: #232b3e;
-            --text: #fff;
-            --muted: #bfc9db;
-            --radius: 18px;
-            --shadow: 0 4px 24px rgba(0,0,0,0.18);
-        }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-            margin: 0;
-        }
-        .topbar {
-            background: var(--primary);
-            padding: 18px 32px;
-            display: flex;
-            gap: 18px;
-            align-items: center;
-            box-shadow: var(--shadow);
-        }
-        .info-box {
-            background: var(--card);
-            color: var(--accent);
-            border-radius: var(--radius);
-            padding: 12px 28px;
-            font-weight: 600;
-            font-size: 1.15em;
-            letter-spacing: 1px;
-            border: 2px solid var(--accent);
-            min-width: 120px;
-            text-align: center;
-            transition: box-shadow 0.2s;
-            box-shadow: 0 2px 8px rgba(30,144,255,0.08);
-        }
-        .tabs {
-            background: var(--primary);
-            display: flex;
-            gap: 2px;
-            padding: 0 16px;
-            box-shadow: var(--shadow);
-        }
-        .tab {
-            flex: 1;
-            padding: 18px 0 14px 0;
-            text-align: center;
-            color: var(--muted);
-            font-weight: 600;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            background: var(--primary);
-            font-size: 1.08em;
-            letter-spacing: 1px;
-            transition: background 0.2s, border-bottom 0.2s, color 0.2s;
-            user-select: none;
-        }
-        .tab.active {
-            border-bottom: 3px solid var(--accent);
-            background: var(--card);
-            color: var(--accent);
-        }
-        .content {
-            padding: 32px 24px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        .dashboard-row {
-            display: flex;
-            gap: 24px;
-            flex-wrap: wrap;
-            margin-top: 24px;
-        }
-        .info-box b {
-            color: var(--text);
-            font-size: 1.05em;
-        }
-        .dashboard-btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 12px;
-            padding: 12px 28px;
-            font-size: 1.08em;
-            font-weight: 600;
-            margin-top: 28px;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(30,144,255,0.10);
-            transition: background 0.2s;
-        }
-        .dashboard-btn:hover {
-            background: #1566b2;
-        }
-        #flightlog-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 18px;
-            margin-top: 24px;
-        }
-        .flightlog-card {
-            background: var(--card);
-            border-radius: var(--radius);
-            padding: 18px;
-            min-width: 160px;
-            box-shadow: var(--shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            position: relative;
-            color: var(--text);
-        }
-        .flightlog-card button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #b71c1c;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 4px 12px;
-            font-size: 1em;
-            cursor: pointer;
-        }
-        .pdf-list {
-            margin-top: 24px;
-        }
-        .pdf-item {
-            background: var(--card);
-            color: var(--accent);
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-weight: 500;
-        }
-        .pdf-item button {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 6px 16px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .pdf-fullscreen {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: var(--bg);
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .pdf-fullscreen canvas {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            max-width: 95vw;
-            max-height: 80vh;
-        }
-        .pdf-fullscreen .pdf-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 16px;
-            margin: 18px 0 0 0;
-        }
-        .pdf-fullscreen button {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            padding: 10px 22px;
-            font-size: 1em;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        @media (max-width: 700px) {
-            .topbar, .content { padding-left: 8px; padding-right: 8px; }
-            .dashboard-row { gap: 10px; }
-            .info-box { padding: 8px 10px; min-width: 80px; font-size: 1em; }
-            .tab { font-size: 0.98em; padding: 12px 0 8px 0; }
-            .flightlog-card { min-width: 120px; padding: 10px; }
-        }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
-    <script>
-        let flightData = { flightNumber: "", departure: "", arrival: "", aircraft: "", dateTime: "" };
-        let flightLogEntries = [];
-        let pdfDoc = null, pdfPageNum = 1, pdfTotalPages = 1, pdfFileUrl = null;
-
-        function updateFlightInfo() {
-            document.getElementById('flight-number').textContent = flightData.flightNumber || "—";
-            document.getElementById('departure').textContent = flightData.departure || "—";
-            document.getElementById('arrival').textContent = flightData.arrival || "—";
-            document.getElementById('aircraft').textContent = flightData.aircraft || "—";
-            document.getElementById('date-time').textContent = flightData.dateTime || "—";
-        }
-
-        function renderFlightLog() {
-            const list = document.getElementById('flightlog-list');
-            if (!list) return;
-            list.innerHTML = '';
-            flightLogEntries.forEach((entry, idx) => {
-                const card = document.createElement('div');
-                card.className = 'flightlog-card';
-                card.innerHTML = `
-                    <button onclick="deleteFlightLog(${idx})">✕</button>
-                    <div><b>${entry.action}</b></div>
-                    <div>${entry.location}</div>
-                    <div>${entry.time}</div>
-                    <div>${entry.note}</div>
-                `;
-                list.appendChild(card);
-            });
-        }
-        function addFlightLog() {
-            const action = document.getElementById('log-action').value.trim();
-            const location = document.getElementById('log-location').value.trim();
-            const time = document.getElementById('log-time').value.trim();
-            const note = document.getElementById('log-note').value.trim();
-            if (action && location && time) {
-                flightLogEntries.push({ action, location, time, note });
-                renderFlightLog();
-                document.getElementById('log-action').value = '';
-                document.getElementById('log-location').value = '';
-                document.getElementById('log-time').value = '';
-                document.getElementById('log-note').value = '';
-            }
-        }
-        function deleteFlightLog(idx) {
-            flightLogEntries.splice(idx, 1);
-            renderFlightLog();
-        }
-
-        function handlePDFUpload(event) {
-            const files = event.target.files;
-            const list = document.getElementById('pdf-list');
-            list.innerHTML = '';
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const item = document.createElement('div');
-                item.className = 'pdf-item';
-                item.innerHTML = `<span>${file.name}</span> <button onclick="showPDF(${i})">Vollbild</button>`;
-                list.appendChild(item);
-            }
-            window.uploadedPDFs = files;
-        }
-        function showPDF(index) {
-            const file = window.uploadedPDFs[index];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                pdfFileUrl = e.target.result;
-                openPDFViewer(pdfFileUrl);
-            };
-            reader.readAsDataURL(file);
-        }
-        function openPDFViewer(url) {
-            const fs = document.getElementById('pdf-fullscreen');
-            fs.style.display = 'flex';
-            fs.innerHTML = `
-                <div class="pdf-controls">
-                    <button onclick="closePDF()">Schließen</button>
-                    <button onclick="prevPDFPage()">&#8592;</button>
-                    <span id="pdf-page-info"></span>
-                    <button onclick="nextPDFPage()">&#8594;</button>
-                </div>
-                <canvas id="pdf-canvas"></canvas>
-            `;
-            loadPDF(url);
-        }
-        function closePDF() {
-            document.getElementById('pdf-fullscreen').style.display = 'none';
-            pdfDoc = null;
-            pdfFileUrl = null;
-        }
-        function loadPDF(url) {
-            pdfjsLib.getDocument(url).promise.then(function(doc) {
-                pdfDoc = doc;
-                pdfTotalPages = doc.numPages;
-                pdfPageNum = 1;
-                renderPDFPage(pdfPageNum);
-            });
-        }
-        function renderPDFPage(num) {
-            pdfDoc.getPage(num).then(function(page) {
-                const viewport = page.getViewport({ scale: 1.5 });
-                const canvas = document.getElementById('pdf-canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                page.render({ canvasContext: context, viewport: viewport });
-                document.getElementById('pdf-page-info').textContent = `Seite ${num}/${pdfTotalPages}`;
-            });
-        }
-        function prevPDFPage() {
-            if (pdfPageNum > 1) { pdfPageNum--; renderPDFPage(pdfPageNum); }
-        }
-        function nextPDFPage() {
-            if (pdfPageNum < pdfTotalPages) { pdfPageNum++; renderPDFPage(pdfPageNum); }
-        }
-
-        function showTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            let tabs = document.querySelectorAll('.tab');
-            if(tab === 'dashboard') tabs[0].classList.add('active');
-            if(tab === 'flightlog') tabs[1].classList.add('active');
-            if(tab === 'documents') tabs[2].classList.add('active');
-            let content = document.getElementById('tab-content');
-            if(tab === 'dashboard') {
-                content.innerHTML = `
-                    <div class="dashboard-row">
-                        <span class="info-box"><b>${flightData.flightNumber || "—"}</b></span>
-                        <span class="info-box">${flightData.departure || "—"}</span>
-                        <span class="info-box">${flightData.arrival || "—"}</span>
-                        <span class="info-box">${flightData.aircraft || "—"}</span>
-                        <span class="info-box">${flightData.dateTime || "—"}</span>
-                    </div>
-                    <button class="dashboard-btn" onclick="importSimBrief()">SimBrief Flug importieren</button>
-                `;
-            }
-            if(tab === 'flightlog') {
-                content.innerHTML = `
-                    <div id="flightlog-list"></div>
-                    <div style="margin-top:24px;">
-                        <input type="text" id="log-action" placeholder="Aktion" style="padding:8px;border-radius:6px;border:1px solid #444;">
-                        <input type="text" id="log-location" placeholder="Ort" style="padding:8px;border-radius:6px;border:1px solid #444;">
-                        <input type="text" id="log-time" placeholder="Zeit" style="padding:8px;border-radius:6px;border:1px solid #444;">
-                        <input type="text" id="log-note" placeholder="Bemerkung" style="padding:8px;border-radius:6px;border:1px solid #444;">
-                        <button class="dashboard-btn" style="padding:8px 16px;margin-left:8px;" onclick="addFlightLog()">Hinzufügen</button>
-                    </div>
-                `;
-                renderFlightLog();
-            }
-            if(tab === 'documents') {
-                content.innerHTML = `
-                    <input type="file" id="pdf-upload" accept="application/pdf" multiple style="margin-top:10px;">
-                    <div class="pdf-list" id="pdf-list"></div>
-                    <div id="pdf-fullscreen" class="pdf-fullscreen" style="display:none;"></div>
-                `;
-                document.getElementById('pdf-upload').addEventListener('change', handlePDFUpload);
-            }
-        }
-
-        async function importSimBrief() {
-            const id = localStorage.getItem('simbriefId');
-            if (!id) {
-                alert('SimBrief ID fehlt! In Einstellungen eintragen.');
-                return;
-            }
-            try {
-                const url = `https://www.simbrief.com/api/xml.fetcher.php?userid=${id}`;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("Fehler beim Abrufen von SimBrief.");
-                const xmlText = await response.text();
-                const parser = new DOMParser();
-                const xml = parser.parseFromString(xmlText, "application/xml");
-                flightData = {
-                    flightNumber: xml.querySelector("general fltnumber")?.textContent || "",
-                    departure: xml.querySelector("origin")?.textContent || "",
-                    arrival: xml.querySelector("destination")?.textContent || "",
-                    aircraft: xml.querySelector("aircraft type")?.textContent || "",
-                    dateTime: xml.querySelector("general date")?.textContent || ""
-                };
-                updateFlightInfo();
-                showTab('dashboard');
-            } catch (e) {
-                alert("Import fehlgeschlagen: " + e.message);
-            }
-        }
-
-        window.onload = () => {
-            showTab('dashboard');
-            updateFlightInfo();
-        };
-    </script>
+  <meta charset="UTF-8">
+  <title>mBrief EFB</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body { margin:0; font-family: Arial, sans-serif; background:#f8f9fa; }
+    header { background:#0d47a1; color:white; padding:10px; display:flex; justify-content:space-between; align-items:center; }
+    header .flight-info span { margin-right:20px; font-weight:500; }
+    nav { display:flex; background:#1565c0; }
+    nav button { flex:1; padding:12px; border:none; background:#1565c0; color:white; font-size:16px; cursor:pointer; }
+    nav button.active { background:#1976d2; }
+    .tab { display:none; height:calc(100vh - 100px); padding:10px; }
+    .tab.active { display:block; }
+    #map { width:100%; height:100%; }
+    textarea { width:100%; height:90%; }
+    input, button, select { padding:8px; margin:5px 0; }
+  </style>
 </head>
 <body>
-    <div class="topbar">
-        <span class="info-box" id="flight-number"></span>
-        <span class="info-box" id="departure"></span>
-        <span class="info-box" id="arrival"></span>
-        <span class="info-box" id="aircraft"></span>
-        <span class="info-box" id="date-time"></span>
+  <header>
+    <div class="flight-info">
+      <span id="flightNumber">Flug: ---</span>
+      <span id="dep">DEP: ---</span>
+      <span id="arr">ARR: ---</span>
+      <span id="aircraft">ACFT: ---</span>
+      <span id="reg">REG: ---</span>
     </div>
-    <div class="tabs">
-        <div class="tab active" onclick="showTab('dashboard')">DASHBOARD</div>
-        <div class="tab" onclick="showTab('flightlog')">FLIGHT LOG</div>
-        <div class="tab" onclick="showTab('documents')">DOCUMENTS</div>
-    </div>
-    <div class="content" id="tab-content"></div>
+    <div class="time" id="clock">--:--:--</div>
+  </header>
+
+  <nav>
+    <button class="active" onclick="openTab('dashboard')">Dashboard</button>
+    <button onclick="openTab('docs')">Docs</button>
+    <button onclick="openTab('map')">Map</button>
+    <button onclick="openTab('charts')">Charts</button>
+    <button onclick="openTab('logbook')">Logbook</button>
+    <button onclick="openTab('settings')">Settings</button>
+  </nav>
+
+  <div id="dashboard" class="tab active">
+    <h2>Flugübersicht</h2>
+    <p>Hier erscheinen Kurzinfos aus SimBrief.</p>
+  </div>
+
+  <div id="docs" class="tab">
+    <h2>PDF/Dokument Viewer</h2>
+    <iframe src="sample.pdf" style="width:100%;height:90%;"></iframe>
+  </div>
+
+  <div id="map" class="tab">
+    <div id="map"></div>
+  </div>
+
+  <div id="charts" class="tab">
+    <h2>Charts</h2>
+    <a href="https://planner.flightsimulator.com" target="_blank">Charts öffnen</a>
+  </div>
+
+  <div id="logbook" class="tab">
+    <h2>Logbuch</h2>
+    <textarea placeholder="Block Off, Block On, Flugzeit, Remarks..."></textarea>
+  </div>
+
+  <div id="settings" class="tab">
+    <h2>Settings</h2>
+    <label>SimBrief Username:</label><br>
+    <input type="text" id="simbriefId"><br>
+    <button onclick="saveSettings()">Speichern</button>
+  </div>
+
+  <script>
+    // Tabs
+    function openTab(id) {
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+      if (id === "map") { setTimeout(()=>{ map.invalidateSize(); }, 200); }
+    }
+
+    // Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clock").textContent = now.toLocaleTimeString();
+    }
+    setInterval(updateClock,1000); updateClock();
+
+    // Settings
+    function saveSettings() {
+      const id = document.getElementById("simbriefId").value;
+      localStorage.setItem("simbriefId", id);
+      loadSimbrief();
+    }
+
+    document.getElementById("simbriefId").value = localStorage.getItem("simbriefId") || "";
+
+    // Map
+    var map = L.map('map').setView([50, 10], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution:'&copy; OpenStreetMap'
+    }).addTo(map);
+    var routeLayer;
+
+    // SimBrief fetch
+    async function loadSimbrief() {
+      const id = localStorage.getItem("simbriefId");
+      if (!id) return;
+      const url = `https://www.simbrief.com/api/xml.fetcher.php?username=${id}`;
+      const resp = await fetch(url);
+      const text = await resp.text();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, "text/xml");
+
+      const flightNum = xml.querySelector("atcflightnumber")?.textContent || "---";
+      const dep = xml.querySelector("origin")?.getAttribute("icao_code") || "---";
+      const arr = xml.querySelector("destination")?.getAttribute("icao_code") || "---";
+      const acft = xml.querySelector("aircraft_icao")?.textContent || "---";
+      const reg = xml.querySelector("aircraft_reg")?.textContent || "---";
+
+      document.getElementById("flightNumber").textContent = "Flug: "+flightNum;
+      document.getElementById("dep").textContent = "DEP: "+dep;
+      document.getElementById("arr").textContent = "ARR: "+arr;
+      document.getElementById("aircraft").textContent = "ACFT: "+acft;
+      document.getElementById("reg").textContent = "REG: "+reg;
+
+      // Route
+      const routeNodes = xml.querySelectorAll("navlog_fix");
+      let coords = [];
+      for (let n of routeNodes) {
+        let lat = parseFloat(n.getAttribute("lat"));
+        let lon = parseFloat(n.getAttribute("lon"));
+        if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
+      }
+      if (routeLayer) { map.removeLayer(routeLayer); }
+      if (coords.length > 0) {
+        routeLayer = L.polyline(coords,{color:"blue"}).addTo(map);
+        map.fitBounds(routeLayer.getBounds());
+      }
+    }
+
+    loadSimbrief();
+  </script>
 </body>
+</html>

@@ -1,446 +1,703 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>EFB Modern</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        :root {
-            --primary: #1e2a3a;
-            --accent: #1e90ff;
-            --bg: #0a2342;
-            --card: #bfc9db;
-            --text: #fff;
-            --muted: #bfc9db;
-            --radius: 32px;
-        }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-            margin: 0;
-        }
-        .topbar {
-            background: var(--primary);
-            padding: 18px 32px;
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            position: relative;
-        }
-        .topbar .plane {
-            font-size: 2.2em;
-            margin-right: 12px;
-        }
-        .topbar .info-row {
-            display: flex;
-            gap: 28px;
-            align-items: center;
-            flex: 1;
-        }
-        .topbar .info-label {
-            color: var(--muted);
-            font-size: 0.95em;
-            font-weight: 500;
-            display: block;
-        }
-        .topbar .info-value {
-            color: var(--text);
-            font-size: 1.08em;
-            font-weight: 600;
-            display: block;
-        }
-        .topbar .load-btn {
-            background: #4fd17c;
-            color: #fff;
-            border: none;
-            border-radius: 20px;
-            padding: 10px 28px;
-            font-size: 1.08em;
-            font-weight: 600;
-            cursor: pointer;
-            margin-left: 24px;
-            box-shadow: 0 2px 8px rgba(30,144,255,0.10);
-            transition: background 0.2s;
-        }
-        .topbar .load-btn:hover {
-            background: #2fa85a;
-        }
-        .topbar .settings {
-            position: absolute;
-            right: 24px;
-            top: 18px;
-            font-size: 1.6em;
-            cursor: pointer;
-            color: var(--muted);
-        }
-        .nav {
-            background: var(--primary);
-            display: flex;
-            gap: 2px;
-            padding: 0 16px;
-            border-bottom: 2px solid #233;
-        }
-        .nav-btn {
-            flex: 1;
-            padding: 18px 0 14px 0;
-            text-align: center;
-            color: var(--muted);
-            font-weight: 600;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            background: var(--primary);
-            font-size: 1.08em;
-            letter-spacing: 1px;
-            transition: background 0.2s, border-bottom 0.2s, color 0.2s;
-            user-select: none;
-        }
-        .nav-btn.active {
-            border-bottom: 3px solid var(--accent);
-            background: #233;
-            color: var(--accent);
-        }
-        .main {
-            padding: 32px 24px;
-            min-height: 70vh;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 48px;
-            justify-content: center;
-            align-items: center;
-        }
-        .card-btn {
-            background: var(--card);
-            color: #222;
-            border-radius: var(--radius);
-            padding: 48px 64px;
-            font-size: 2em;
-            font-weight: 500;
-            text-align: center;
-            margin: 12px;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(30,144,255,0.10);
-            border: none;
-            transition: background 0.2s, color 0.2s;
-        }
-        .card-btn:hover {
-            background: #e3eaf7;
-            color: var(--accent);
-        }
-        @media (max-width: 900px) {
-            .main { gap: 24px; }
-            .card-btn { padding: 32px 24px; font-size: 1.3em; }
-            .topbar .info-row { gap: 12px; }
-        }
-        @media (max-width: 600px) {
-            .main { flex-direction: column; gap: 18px; }
-            .card-btn { padding: 18px 10px; font-size: 1em; }
-            .topbar { flex-direction: column; gap: 8px; padding: 12px 8px; }
-            .topbar .settings { right: 8px; top: 12px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="topbar">
-        <span class="plane">✈️</span>
-        <div class="info-row">
-            <div>
-                <span class="info-label">Flugnummer</span>
-                <span class="info-value" id="flight-number">—</span>
-            </div>
-            <div>
-                <span class="info-label">Departure<br>Airport</span>
-                <span class="info-value" id="departure">—</span>
-            </div>
-            <div>
-                <span class="info-label">Arrival<br>Airport</span>
-                <span class="info-value" id="arrival">—</span>
-            </div>
-            <div>
-                <span class="info-label">Datum/<br>Uhrzeit</span>
-                <span class="info-value" id="datetime">—</span>
-            </div>
-            <div>
-                <span class="info-label">Flugzeug<br>Typ</span>
-                <span class="info-value" id="aircraft">—</span>
-            </div>
-            <button class="load-btn" onclick="loadFlight()">Flug Laden</button>
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MapContainer, TileLayer, Polyline, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, Plane, Settings, MapPin, FileText, BookOpenText, Route as RouteIcon, Layers, Clock, Cloud, Download, ExternalLink, RefreshCcw, ChevronRight, Pin, Shield, Gauge } from "lucide-react";
+import { saveAs } from "file-saver";
+
+/**
+ * Lufthansa‑style EFB PWA – Single‑file React app
+ * ------------------------------------------------
+ * Features:
+ *  - Top flight ribbon with dynamic “tags” (flight, DEP/ARR, STD/Date, A/C type)
+ *  - SimBrief import: fetch latest OFP for a username, parse XML → JSON
+ *  - PDF document reader (OFP): inline viewer via <embed> with local fallback
+ *  - Route page: high‑quality moving map with airway track and waypoints
+ *  - Charts link: opens planner.flightsimulator.com in an in‑app WebView
+ *  - Logbook: per‑airport entries, stored in localStorage, export CSV
+ *  - iPad‑friendly UI, PWA runtime manifest + service worker generated on the fly
+ *  - Lufthansa colorway and layout inspired by cockpit EFBs
+ */
+
+// --- Theming (LH colorway) ---
+const LH = {
+  navy: "#0b2740",
+  navySoft: "#102f4d",
+  slate: "#0f1e2e",
+  blue: "#1c3b5a",
+  yellow: "#f7c600",
+  gray: "#b8c1cc",
+  text: "#e8eef5",
+};
+
+const appStyles: React.CSSProperties = {
+  background: `linear-gradient(180deg, ${LH.navy} 0%, ${LH.slate} 100%)`,
+  color: LH.text,
+  minHeight: "100vh",
+};
+
+// --- Simple helpers ---
+const fmt = (v?: string | number | null) => (v === undefined || v === null || v === "" ? "—" : String(v));
+const toTitle = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+// --- Service Worker + Manifest, created at runtime so this works as a single file ---
+function usePWA() {
+  useEffect(() => {
+    // Manifest via Blob
+    const manifest = {
+      name: "EFB – Flight Kit",
+      short_name: "EFB",
+      description: "Lufthansa‑style EFB PWA for iPad: SimBrief, Moving Map, Docs, Charts, Logbook",
+      display: "standalone",
+      start_url: ".",
+      background_color: LH.navy,
+      theme_color: LH.navy,
+      icons: [
+        {
+          src: makePngIcon(192),
+          sizes: "192x192",
+          type: "image/png",
+        },
+        {
+          src: makePngIcon(512),
+          sizes: "512x512",
+          type: "image/png",
+        },
+      ],
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    const manifestUrl = URL.createObjectURL(manifestBlob);
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = manifestUrl;
+    document.head.appendChild(link);
+
+    // Service worker via Blob (cache shell + offline doc)
+    if ("serviceWorker" in navigator) {
+      const sw = `self.addEventListener('install', e=>{e.waitUntil(caches.open('efb-v1').then(c=>c.addAll(['./'])))});self.addEventListener('fetch', e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))})`;
+      const swUrl = URL.createObjectURL(new Blob([sw], { type: "text/javascript" }));
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (!reg) navigator.serviceWorker.register(swUrl);
+      });
+    }
+
+    return () => {
+      document.head.removeChild(link);
+      URL.revokeObjectURL(manifestUrl);
+    };
+  }, []);
+}
+
+// Tiny canvas icon generator so we don't need external files
+function makePngIcon(size: number): string {
+  const cnv = document.createElement("canvas");
+  cnv.width = cnv.height = size;
+  const ctx = cnv.getContext("2d")!;
+  // Background circle
+  ctx.fillStyle = LH.navy;
+  ctx.fillRect(0, 0, size, size);
+  // LH yellow aircraft glyph
+  ctx.fillStyle = LH.yellow;
+  ctx.translate(size / 2, size / 2);
+  ctx.rotate(-Math.PI / 8);
+  ctx.fillRect(-size * 0.02, -size * 0.35, size * 0.04, size * 0.7); // fuselage
+  ctx.fillRect(-size * 0.18, -size * 0.05, size * 0.36, size * 0.1); // wing
+  ctx.fillRect(-size * 0.08, size * 0.1, size * 0.16, size * 0.06); // tailplane
+  return cnv.toDataURL("image/png");
+}
+
+// --- SimBrief XML fetch + parse ---
+async function fetchSimBrief(username: string): Promise<SimBriefPack> {
+  const url = `https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(username)}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error("SimBrief Antwort fehlgeschlagen");
+  const xml = await res.text();
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, "application/xml");
+
+  // Extract common fields (use fallbacks when missing)
+  const ofpUrl = text(doc, "ofp_link") || text(doc, "ofp_html_link") || text(doc, "text_plan_link") || "";
+  const dep = text(doc, "origin") || text(doc, "orig_icao") || "";
+  const arr = text(doc, "destination") || text(doc, "dest_icao") || "";
+  const flight = text(doc, "callsign") || text(doc, "fltno") || "";
+  const acType = text(doc, "aircraft_icaocode") || text(doc, "aircraft_type") || "";
+  const std = text(doc, "deptime") || text(doc, "std") || text(doc, "sched_out") || "";
+  const date = text(doc, "date") || text(doc, "release_date") || new Date().toISOString().slice(0, 10);
+
+  // Route string + waypoints (lat/lon) if available
+  const route = text(doc, "route") || text(doc, "atc_route") || "";
+  const wpts: { name: string; lat: number; lon: number }[] = [];
+  doc.querySelectorAll("navlog > fix").forEach((fx) => {
+    const name = fx.getAttribute("ident") || textEl(fx, "ident") || "WPT";
+    const lat = parseFloat(textEl(fx, "lat"));
+    const lon = parseFloat(textEl(fx, "lon"));
+    if (Number.isFinite(lat) && Number.isFinite(lon)) wpts.push({ name, lat, lon });
+  });
+
+  return {
+    meta: { flight, dep, arr, acType, std, date, ofpUrl, route },
+    waypoints: wpts,
+    rawXml: xml,
+  };
+}
+
+function text(doc: Document, tag: string): string | undefined {
+  const el = doc.querySelector(tag);
+  return el ? el.textContent || undefined : undefined;
+}
+function textEl(root: Element, tag: string): string {
+  const el = root.querySelector(tag);
+  return (el && el.textContent) || "";
+}
+
+type SimBriefPack = {
+  meta: {
+    flight: string;
+    dep: string;
+    arr: string;
+    acType: string;
+    std: string;
+    date: string;
+    ofpUrl: string;
+    route: string;
+  };
+  waypoints: { name: string; lat: number; lon: number }[];
+  rawXml: string;
+};
+
+// --- Logbook types ---
+interface LogEntry {
+  id: string;
+  date: string; // ISO date
+  airport: string; // ICAO
+  flight: string; // callsign
+  acType: string;
+  role: string; // PIC/SIC/Solo/Sim
+  blockOff?: string;
+  blockOn?: string;
+  dep?: string;
+  arr?: string;
+  timeTotal?: number; // minutes
+  notes?: string;
+}
+
+// --- Main App ---
+export default function App() {
+  usePWA();
+
+  const [tab, setTab] = useState("dashboard");
+  const [username, setUsername] = useState(localStorage.getItem("efb_simbrief_user") || "");
+  const [pack, setPack] = useState<SimBriefPack | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
+
+  // Logbook state
+  const [log, setLog] = useState<LogEntry[]>(() => {
+    const raw = localStorage.getItem("efb_logbook");
+    return raw ? (JSON.parse(raw) as LogEntry[]) : [];
+  });
+
+  useEffect(() => localStorage.setItem("efb_logbook", JSON.stringify(log)), [log]);
+
+  const flightRibbon = useMemo(() => buildRibbon(pack), [pack]);
+
+  async function handleLoad() {
+    if (!username) return alert("Bitte SimBrief Benutzername eingeben.");
+    try {
+      setLoading(true);
+      localStorage.setItem("efb_simbrief_user", username);
+      const data = await fetchSimBrief(username);
+      setPack(data);
+      if (data.meta.ofpUrl) {
+        // Try to load HTML OFP directly; if cross‑origin blocks, offer download
+        setPdfUrl(data.meta.ofpUrl);
+      }
+      toast(`Flugplan geladen: ${data.meta.flight || "—"}`);
+    } catch (e: any) {
+      console.error(e);
+      toast("Konnte SimBrief nicht laden. Offline‑Demo wird gezeigt.");
+      // Minimal offline demo
+      setPack({
+        meta: {
+          flight: "DE157",
+          dep: "EDDF",
+          arr: "LPMA",
+          acType: "A321",
+          std: "1130Z",
+          date: new Date().toISOString().slice(0, 10),
+          ofpUrl: "",
+          route: "TOBAK Y163 UNKOR T104 KPT ...",
+        },
+        waypoints: [
+          { name: "EDDF", lat: 50.0379, lon: 8.5622 },
+          { name: "KPT", lat: 49.5, lon: 9.93 },
+          { name: "LPMA", lat: 32.6979, lon: -16.7745 },
+        ],
+        rawXml: "",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function addLogFromPack() {
+    if (!pack) return;
+    const ent: LogEntry = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString().slice(0, 10),
+      airport: pack.meta.dep,
+      flight: pack.meta.flight,
+      acType: pack.meta.acType,
+      role: "Sim",
+      dep: pack.meta.dep,
+      arr: pack.meta.arr,
+      notes: pack.meta.route,
+    };
+    setLog([ent, ...log]);
+    toast("In Logbuch übernommen.");
+  }
+
+  function deleteLog(id: string) {
+    setLog((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  function exportCsv() {
+    const header = [
+      "date",
+      "airport",
+      "flight",
+      "acType",
+      "role",
+      "blockOff",
+      "blockOn",
+      "dep",
+      "arr",
+      "timeTotal",
+      "notes",
+    ];
+    const rows = log.map((e) => header.map((k) => (e as any)[k] ?? ""));
+    const csv = [header.join(","), ...rows.map((r) => r.map((x) => JSON.stringify(x)).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    saveAs(blob, "logbook.csv");
+  }
+
+  return (
+    <div style={appStyles} className="w-full min-h-screen">
+      <TopBar ribbon={flightRibbon} onSettings={() => setTab("settings")}/>
+
+      <div className="max-w-[1200px] mx-auto px-4 pb-24">
+        {/* Header controls */}
+        <div className="flex flex-wrap items-center gap-3 pt-4">
+          <div className="flex items-center gap-2 bg-[#0e243b] rounded-2xl px-3 py-2 shadow">
+            <Plane className="w-5 h-5" />
+            <span className="opacity-80">Benutzer:</span>
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="SimBrief Username"
+              className="bg-[#0b1a2a] border-0 text-white w-[200px]"
+            />
+            <Button onClick={handleLoad} className="rounded-full bg-[rgb(247,198,0)] text-black hover:opacity-90">
+              <RefreshCcw className="w-4 h-4 mr-2" /> Flug laden
+            </Button>
+          </div>
+
+          <div className="flex-1"></div>
+
+          <RibbonDisplay ribbon={flightRibbon} />
         </div>
-        <span class="settings" onclick="openSettings()">⚙️</span>
-    </div>
-    <div class="nav">
-        <div class="nav-btn active" onclick="showTab('home')">Home</div>
-        <div class="nav-btn" onclick="showTab('dashboard')">Dashboard</div>
-        <div class="nav-btn" onclick="showTab('dokumente')">Dokumente</div>
-        <div class="nav-btn" onclick="showTab('route')">Route</div>
-        <div class="nav-btn" onclick="window.open('https://planner.flightsimulator.com','_blank')">Charts</div>
-        <div class="nav-btn" onclick="showTab('logbuch')">Logbuch</div>
-    </div>
-    <div class="main" id="main">
-        <button class="card-btn" onclick="showTab('dashboard')"><i>Dashboard</i></button>
-        <button class="card-btn" onclick="showTab('dokumente')"><i>Dokumente</i></button>
-        <button class="card-btn" onclick="showTab('route')"><i>Route</i></button>
-        <button class="card-btn" onclick="window.open('https://planner.flightsimulator.com','_blank')"><i>Charts</i></button>
-        <button class="card-btn" onclick="showTab('logbuch')"><i>Logbuch</i></button>
-    </div>
-    <!-- Settings Modal -->
-    <div id="settings-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);z-index:1000;">
-        <div style="background:#fff;color:#222;max-width:400px;margin:80px auto;padding:30px;border-radius:24px;position:relative;">
-            <h2>Einstellungen</h2>
-            <label for="simbrief-id">SimBrief ID:</label>
-            <input type="text" id="simbrief-id" placeholder="Deine SimBrief ID" style="width:100%;padding:8px;margin-bottom:16px;border-radius:8px;border:1px solid #ccc;font-size:1em;">
-            <button onclick="saveSettings()" style="background:#1e90ff;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:1em;cursor:pointer;margin-right:8px;">Speichern</button>
-            <button onclick="closeSettings()" style="background:#aaa;color:#222;border:none;padding:8px 18px;border-radius:8px;font-size:1em;cursor:pointer;">Schließen</button>
-        </div>
-    </div>
-    <script>
-        // Dynamische Zeit
-        function updateDateTime() {
-            const now = new Date();
-            const d = now.toLocaleDateString('de-DE');
-            const t = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('datetime').textContent = `${d} ${t}`;
-        }
-        setInterval(updateDateTime, 1000);
-        updateDateTime();
 
-        // Tab-Wechsel
-        function showTab(tab) {
-            document.querySelectorAll('.nav-btn').forEach(t => t.classList.remove('active'));
-            if(tab === 'home') document.querySelectorAll('.nav-btn')[0].classList.add('active');
-            if(tab === 'dashboard') document.querySelectorAll('.nav-btn')[1].classList.add('active');
-            if(tab === 'dokumente') document.querySelectorAll('.nav-btn')[2].classList.add('active');
-            if(tab === 'route') document.querySelectorAll('.nav-btn')[3].classList.add('active');
-            if(tab === 'logbuch') document.querySelectorAll('.nav-btn')[5].classList.add('active');
-            const main = document.getElementById('main');
-            if(tab === 'home') {
-                main.innerHTML = `
-                    <button class="card-btn" onclick="showTab('dashboard')"><i>Dashboard</i></button>
-                    <button class="card-btn" onclick="showTab('dokumente')"><i>Dokumente</i></button>
-                    <button class="card-btn" onclick="showTab('route')"><i>Route</i></button>
-                    <button class="card-btn" onclick="window.open('https://planner.flightsimulator.com','_blank')"><i>Charts</i></button>
-                    <button class="card-btn" onclick="showTab('logbuch')"><i>Logbuch</i></button>
-                `;
-            }
-            if(tab === 'dashboard') {
-                main.innerHTML = `
-                    <div style="display:flex;flex-wrap:wrap;gap:32px;justify-content:center;">
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Flugnummer</div>
-                            <div style="font-size:1.5em;font-weight:700;" id="dash-fltnumber">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Departure</div>
-                            <div style="font-size:1.5em;font-weight:700;" id="dash-departure">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Arrival</div>
-                            <div style="font-size:1.5em;font-weight:700;" id="dash-arrival">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Flugzeug</div>
-                            <div style="font-size:1.5em;font-weight:700;" id="dash-aircraft">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Flugzeit</div>
-                            <div style="font-size:1.5em;font-weight:700;" id="dash-airtime">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Route</div>
-                            <div style="font-size:1em;font-weight:700;" id="dash-route">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Gewichte</div>
-                            <div style="font-size:1em;font-weight:700;" id="dash-weight">—</div>
-                        </div>
-                    </div>
-                `;
-                // Hier werden die Daten aus SimBrief eingetragen
-                setDashboardInfos();
-            }
-            if(tab === 'dokumente') {
-                main.innerHTML = `
-                    <input type="file" id="pdf-upload" accept="application/pdf" multiple style="margin-top:10px;">
-                    <div class="pdf-list" id="pdf-list"></div>
-                    <div id="pdf-fullscreen" class="pdf-fullscreen" style="display:none;"></div>
-                `;
-                document.getElementById('pdf-upload').addEventListener('change', handlePDFUpload);
-            }
-            if(tab === 'route') {
-                main.innerHTML = `
-                    <div id="map" style="width:100%;height:70vh;border-radius:24px;box-shadow:0 2px 8px rgba(30,144,255,0.10);"></div>
-                `;
-                loadMap();
-            }
-            if(tab === 'logbuch') {
-                main.innerHTML = `
-                    <div style="display:flex;flex-wrap:wrap;gap:32px;justify-content:center;">
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Block</div>
-                            <div style="font-size:1em;font-weight:700;" id="log-block">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Takeoff</div>
-                            <div style="font-size:1em;font-weight:700;" id="log-takeoff">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Landing</div>
-                            <div style="font-size:1em;font-weight:700;" id="log-landing">—</div>
-                        </div>
-                        <div class="card-btn" style="background:#e3eaf7;color:#222;min-width:220px;">
-                            <div style="font-size:1.1em;color:#1e90ff;">Bemerkung</div>
-                            <div style="font-size:1em;font-weight:700;" id="log-note">—</div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
+        {/* Tabs */}
+        <Tabs value={tab} onValueChange={setTab} className="mt-4">
+          <TabsList className="grid grid-cols-6 bg-[#0e243b] rounded-2xl p-1 gap-1">
+            <TabsTrigger value="dashboard" className="rounded-xl">Home</TabsTrigger>
+            <TabsTrigger value="documents" className="rounded-xl">Dokumente</TabsTrigger>
+            <TabsTrigger value="route" className="rounded-xl">Route</TabsTrigger>
+            <TabsTrigger value="charts" className="rounded-xl">Charts</TabsTrigger>
+            <TabsTrigger value="logbook" className="rounded-xl">Logbuch</TabsTrigger>
+            <TabsTrigger value="settings" className="rounded-xl"><Settings className="w-4 h-4"/></TabsTrigger>
+          </TabsList>
 
-        // Dummy: SimBrief Daten eintragen (hier ersetzen durch echten Import)
-        function setDashboardInfos() {
-            document.getElementById('dash-fltnumber').textContent = window.simbrief?.flightNumber || "DLH344";
-            document.getElementById('dash-departure').textContent = window.simbrief?.departure || "EDDM";
-            document.getElementById('dash-arrival').textContent = window.simbrief?.arrival || "EDDL";
-            document.getElementById('dash-aircraft').textContent = window.simbrief?.aircraft || "A350-900";
-            document.getElementById('dash-airtime').textContent = window.simbrief?.airTime || "00:50";
-            document.getElementById('dash-route').textContent = window.simbrief?.route || "EDDM/26L N0452F320 GIVM65 ... EDDL/23L";
-            document.getElementById('dash-weight').textContent = window.simbrief?.blockFuel ? `Block Fuel: ${window.simbrief.blockFuel}` : "Block Fuel: 12.444 kg";
-        }
+          {/* DASHBOARD */}
+          <TabsContent value="dashboard" className="mt-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <InfoCard title="Fluginfo" icon={<Gauge className="w-5 h-5"/>}>
+                <KeyRow k="Flug" v={pack?.meta.flight} />
+                <KeyRow k="Von" v={pack?.meta.dep} />
+                <KeyRow k="Nach" v={pack?.meta.arr} />
+                <KeyRow k="STD" v={pack?.meta.std} />
+                <KeyRow k="A/C" v={pack?.meta.acType} />
+              </InfoCard>
 
-        // PDF Reader
-        let pdfDoc = null, pdfPageNum = 1, pdfTotalPages = 1, pdfFileUrl = null;
-        function handlePDFUpload(event) {
-            const files = event.target.files;
-            const list = document.getElementById('pdf-list');
-            list.innerHTML = '';
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const item = document.createElement('div');
-                item.className = 'pdf-item';
-                item.innerHTML = `<span>${file.name}</span> <button onclick="showPDF(${i})">Vollbild</button>`;
-                list.appendChild(item);
-            }
-            window.uploadedPDFs = files;
-        }
-        function showPDF(index) {
-            const file = window.uploadedPDFs[index];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                pdfFileUrl = e.target.result;
-                openPDFViewer(pdfFileUrl);
-            };
-            reader.readAsDataURL(file);
-        }
-        function openPDFViewer(url) {
-            const fs = document.getElementById('pdf-fullscreen');
-            fs.style.display = 'flex';
-            fs.innerHTML = `
-                <div class="pdf-controls">
-                    <button onclick="closePDF()">Schließen</button>
-                    <button onclick="prevPDFPage()">&#8592;</button>
-                    <span id="pdf-page-info"></span>
-                    <button onclick="nextPDFPage()">&#8594;</button>
+              <InfoCard title="Aktionen" icon={<Layers className="w-5 h-5"/>}>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => setTab("route")} variant="secondary" className="rounded-xl">Moving Map</Button>
+                  <Button onClick={() => setTab("documents")} variant="secondary" className="rounded-xl">OFP öffnen</Button>
+                  <Button onClick={addLogFromPack} className="rounded-xl bg-[rgb(247,198,0)] text-black">In Logbuch</Button>
                 </div>
-                <canvas id="pdf-canvas"></canvas>
-            `;
-            loadPDF(url);
-        }
-        function closePDF() {
-            document.getElementById('pdf-fullscreen').style.display = 'none';
-            pdfDoc = null;
-            pdfFileUrl = null;
-        }
-        function loadPDF(url) {
-            pdfjsLib.getDocument(url).promise.then(function(doc) {
-                pdfDoc = doc;
-                pdfTotalPages = doc.numPages;
-                pdfPageNum = 1;
-                renderPDFPage(pdfPageNum);
-            });
-        }
-        function renderPDFPage(num) {
-            pdfDoc.getPage(num).then(function(page) {
-                const viewport = page.getViewport({ scale: 1.5 });
-                const canvas = document.getElementById('pdf-canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                page.render({ canvasContext: context, viewport: viewport });
-                document.getElementById('pdf-page-info').textContent = `Seite ${num}/${pdfTotalPages}`;
-            });
-        }
-        function prevPDFPage() {
-            if (pdfPageNum > 1) { pdfPageNum--; renderPDFPage(pdfPageNum); }
-        }
-        function nextPDFPage() {
-            if (pdfPageNum < pdfTotalPages) { pdfPageNum++; renderPDFPage(pdfPageNum); }
-        }
+              </InfoCard>
 
-        // Dummy: Hochwertige Moving Map (Leaflet.js Beispiel)
-        function loadMap() {
-            if (window.L) return; // Nur einmal laden
-            const script = document.createElement('script');
-            script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-            document.body.appendChild(script);
-            const link = document.createElement('link');
-            link.rel = "stylesheet";
-            link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-            document.head.appendChild(link);
-            script.onload = () => {
-                const mapDiv = document.getElementById('map');
-                const map = L.map(mapDiv).setView([50, 10], 5);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 18,
-                    attribution: '© OpenStreetMap'
-                }).addTo(map);
-                // Dummy Route
-                const route = [
-                    [48.3538, 11.7861], // EDDM
-                    [51.2895, 6.7668]   // EDDL
-                ];
-                L.polyline(route, {color: "#1e90ff", weight: 5}).addTo(map);
-                L.marker(route[0]).addTo(map).bindPopup("Departure: EDDM");
-                L.marker(route[1]).addTo(map).bindPopup("Arrival: EDDL");
-            };
-        }
+              <InfoCard title="Wetter (Demo)" icon={<Cloud className="w-5 h-5"/>}>
+                <div className="opacity-80 text-sm">API nicht verbunden – Platzhalter:</div>
+                <ul className="text-sm mt-2 space-y-1">
+                  <li>EDDF: FEW020 12°C 1018hPa</li>
+                  <li>LPMA: SCT025 21°C 1016hPa</li>
+                </ul>
+              </InfoCard>
+            </div>
+          </TabsContent>
 
-        // Settings Modal
-        function openSettings() {
-            document.getElementById('settings-modal').style.display = 'block';
-            document.getElementById('simbrief-id').value = localStorage.getItem('simbriefId') || '';
-        }
-        function closeSettings() {
-            document.getElementById('settings-modal').style.display = 'none';
-        }
-        function saveSettings() {
-            const id = document.getElementById('simbrief-id').value;
-            localStorage.setItem('simbriefId', id);
-            alert('SimBrief ID gespeichert!');
-            closeSettings();
-        }
+          {/* DOCUMENTS */}
+          <TabsContent value="documents" className="mt-4">
+            <Card className="bg-[#0e243b] border-0 rounded-2xl overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5"/> <span className="font-semibold">OFP / Dokumente</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex items-center gap-2 text-sm opacity-80 cursor-pointer">
+                      <Upload className="w-4 h-4"/>
+                      <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e)=>{
+                        const f=e.target.files?.[0];
+                        if(!f) return; setPdfUrl(URL.createObjectURL(f)); setPdfOpen(true);
+                      }}/>
+                      PDF laden
+                    </label>
+                    {pack?.meta.ofpUrl && (
+                      <Button variant="secondary" className="rounded-xl" onClick={()=>{setPdfUrl(pack.meta.ofpUrl); setPdfOpen(true);}}>
+                        <Download className="w-4 h-4 mr-2"/> Aus SimBrief öffnen
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4">
+                  {!pdfUrl ? (
+                    <div className="text-sm opacity-70">Noch kein Dokument geöffnet. Lade eine PDF oder importiere aus SimBrief.</div>
+                  ) : (
+                    <DocViewer url={pdfUrl} open={pdfOpen} onOpenChange={setPdfOpen} />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        // Flug Laden Dummy
-        function loadFlight() {
-            // Hier SimBrief API laden und window.simbrief füllen
-            window.simbrief = {
-                flightNumber: "DLH344",
-                departure: "EDDM",
-                arrival: "EDDL",
-                aircraft: "A350-900",
-                airTime: "00:50",
-                route: "EDDM/26L N0452F320 GIVM65 ... EDDL/23L",
-                blockFuel: "12.444 kg"
-            };
-            document.getElementById('flight-number').textContent = window.simbrief.flightNumber;
-            document.getElementById('departure').textContent = window.simbrief.departure;
-            document.getElementById('arrival').textContent = window.simbrief.arrival;
-            document.getElementById('aircraft').textContent = window.simbrief.aircraft;
-            showTab('dashboard');
-        }
+          {/* ROUTE / MOVING MAP */}
+          <TabsContent value="route" className="mt-4">
+            <RouteMap pack={pack} />
+          </TabsContent>
 
-        window.onload = () => {
-            showTab('home');
-        };
-    </script>
-</body>
-</html>
+          {/* CHARTS LINK */}
+          <TabsContent value="charts" className="mt-4">
+            <Card className="bg-[#0e243b] border-0 rounded-2xl overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                  <div className="flex items-center gap-2"><MapPin className="w-5 h-5"/>Charts (planner.flightsimulator.com)</div>
+                  <a href="https://planner.flightsimulator.com" target="_blank" rel="noreferrer" className="text-sm inline-flex items-center gap-1 opacity-80 hover:opacity-100">
+                    In neuem Tab öffnen <ExternalLink className="w-4 h-4"/>
+                  </a>
+                </div>
+                <div className="h-[70vh]">
+                  <iframe title="Charts" src="https://planner.flightsimulator.com" className="w-full h-full"/>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* LOGBOOK */}
+          <TabsContent value="logbook" className="mt-4">
+            <Logbook log={log} setLog={setLog} onExport={exportCsv} />
+          </TabsContent>
+
+          {/* SETTINGS */}
+          <TabsContent value="settings" className="mt-4">
+            <Card className="bg-[#0e243b] border-0 rounded-2xl">
+              <CardContent className="p-4 space-y-3">
+                <div className="font-semibold">Einstellungen</div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="text-sm opacity-80">SimBrief Benutzername</div>
+                    <Input value={username} onChange={(e)=>setUsername(e.target.value)} className="bg-[#0b1a2a] border-0"/>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm opacity-80">Einheiten</div>
+                    <Select defaultValue="metric">
+                      <SelectTrigger className="bg-[#0b1a2a] border-0"><SelectValue/></SelectTrigger>
+                      <SelectContent className="bg-[#0e243b] border-0">
+                        <SelectItem value="metric">Metric</SelectItem>
+                        <SelectItem value="imperial">Imperial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <Toasts />
+    </div>
+  );
+}
+
+// --- Subcomponents ---
+function KeyRow({ k, v }: { k: string; v?: string }) {
+  return (
+    <div className="flex items-center justify-between py-1 text-sm">
+      <span className="opacity-70">{k}</span>
+      <span className="font-mono">{fmt(v)}</span>
+    </div>
+  );
+}
+
+function InfoCard({ title, icon, children }: { title: string; icon?: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <Card className="bg-[#0e243b] border-0 rounded-2xl shadow-xl">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 text-lg font-semibold mb-2">{icon}{title}</div>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RibbonDisplay({ ribbon }: { ribbon: RibbonItem[] }) {
+  return (
+    <div className="flex items-center flex-wrap gap-2">
+      {ribbon.map((r) => (
+        <span key={r.label}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full shadow"
+          style={{ background: r.bg, color: r.fg, border: `1px solid ${r.border}` }}>
+          {r.icon}{r.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TopBar({ ribbon, onSettings }: { ribbon: RibbonItem[]; onSettings: ()=>void }) {
+  return (
+    <div className="sticky top-0 z-40 backdrop-blur" style={{ background: `${LH.navy}cc`, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="w-8 h-8 rounded-2xl flex items-center justify-center" style={{ background: LH.yellow }}>
+            <Plane className="w-4 h-4 text-black"/>
+          </span>
+          <div className="font-semibold tracking-wide">Flugnummer</div>
+        </div>
+        <div className="flex-1" />
+        <RibbonDisplay ribbon={ribbon} />
+        <Button onClick={onSettings} size="icon" variant="secondary" className="rounded-full ml-3">
+          <Settings className="w-4 h-4"/>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Ribbon builder resembling screenshot tags
+type RibbonItem = { label: string; icon?: React.ReactNode; bg: string; fg: string; border: string };
+function buildRibbon(pack: SimBriefPack | null): RibbonItem[] {
+  const i = pack?.meta;
+  const dim = (a: string, b: string) => ({
+    label: a,
+    bg: "#102a45",
+    fg: "#e8eef5",
+    border: "#223b58",
+  });
+  return [
+    { label: i?.flight || "DE157", bg: LH.yellow, fg: "#000", border: "#d3aa00" },
+    dim(i?.dep || "EDDF", "DEP"),
+    dim(i?.arr || "LPMA", "ARR"),
+    dim(i?.date || new Date().toLocaleDateString(), "DATE"),
+    dim(i?.acType || "A321", "AC"),
+  ];
+}
+
+// Document viewer – uses <embed> for simplicity (works well on iPad Safari for PDFs)
+function DocViewer({ url, open, onOpenChange }: { url: string; open: boolean; onOpenChange: (v:boolean)=>void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[95vw] w-[1200px] h-[85vh] p-0 overflow-hidden">
+        <DialogHeader className="px-4 py-2 border-b border-white/10">
+          <DialogTitle className="flex items-center gap-2"><FileText className="w-4 h-4"/> Dokument</DialogTitle>
+        </DialogHeader>
+        <div className="w-full h-full bg-black">
+          <embed src={url} type="application/pdf" className="w-full h-full" />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Moving Map – high‑quality tiles + polyline from waypoints
+function RouteMap({ pack }: { pack: SimBriefPack | null }) {
+  // Build positions from waypoints; if empty, fall back to EDDF → LPMA demo
+  const pts = (pack?.waypoints?.length ? pack.waypoints : [
+    { name: "EDDF", lat: 50.0379, lon: 8.5622 },
+    { name: "LPMA", lat: 32.6979, lon: -16.7745 },
+  ]).map((w) => [w.lat, w.lon]) as [number, number][];
+
+  const center: [number, number] = pts[Math.floor(pts.length / 2)] || [48.0, 8.0];
+
+  // Custom marker (tiny LH yellow pin)
+  const pin = useMemo(() => new L.Icon({
+    iconUrl: iconDataUrl(),
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  }), []);
+
+  return (
+    <Card className="bg-[#0e243b] border-0 rounded-2xl overflow-hidden">
+      <CardContent className="p-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div className="flex items-center gap-2"><RouteIcon className="w-5 h-5"/>Route & Moving Map</div>
+          <div className="text-sm opacity-70">{pack?.meta.route || "Routing aus SimBrief wird hier angezeigt."}</div>
+        </div>
+        <div className="h-[75vh]">
+          <MapContainer center={center} zoom={5} className="w-full h-full">
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
+            <Polyline positions={pts} weight={3} opacity={0.9} />
+            {pts.map(([lat, lon], idx) => (
+              <Marker key={idx} position={[lat, lon]} icon={pin}>
+                <Popup>Waypoint {idx + 1}</Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function iconDataUrl() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 24; const x = c.getContext("2d")!;
+  x.fillStyle = LH.yellow; x.beginPath(); x.arc(12,12,6,0,Math.PI*2); x.fill();
+  x.strokeStyle = "#2d2d2d"; x.lineWidth = 2; x.stroke();
+  return c.toDataURL("image/png");
+}
+
+// Logbook component
+function Logbook({ log, setLog, onExport }: { log: LogEntry[]; setLog: (v: LogEntry[])=>void; onExport: ()=>void }) {
+  const [newEntry, setNewEntry] = useState<Partial<LogEntry>>({ date: new Date().toISOString().slice(0,10) });
+
+  function add() {
+    const e: LogEntry = {
+      id: crypto.randomUUID(),
+      date: newEntry.date || new Date().toISOString().slice(0,10),
+      airport: (newEntry.airport || "").toUpperCase(),
+      flight: (newEntry.flight || "").toUpperCase(),
+      acType: (newEntry.acType || "").toUpperCase(),
+      role: newEntry.role || "Sim",
+      blockOff: newEntry.blockOff,
+      blockOn: newEntry.blockOn,
+      dep: newEntry.dep?.toUpperCase(),
+      arr: newEntry.arr?.toUpperCase(),
+      timeTotal: newEntry.timeTotal ? Number(newEntry.timeTotal) : undefined,
+      notes: newEntry.notes,
+    };
+    setLog([e, ...log]);
+    setNewEntry({ date: new Date().toISOString().slice(0,10) });
+  }
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-4">
+      <Card className="bg-[#0e243b] border-0 rounded-2xl">
+        <CardContent className="p-4 space-y-2">
+          <div className="font-semibold">Eintrag hinzufügen</div>
+          <div className="grid grid-cols-2 gap-2">
+            <Input placeholder="Datum" value={newEntry.date||""} onChange={(e)=>setNewEntry({...newEntry,date:e.target.value})} className="bg-[#0b1a2a] border-0"/>
+            <Input placeholder="Flug" value={newEntry.flight||""} onChange={(e)=>setNewEntry({...newEntry,flight:e.target.value})} className="bg-[#0b1a2a] border-0"/>
+            <Input placeholder="ICAO" value={newEntry.airport||""} onChange={(e)=>setNewEntry({...newEntry,airport:e.target.value})} className="bg-[#0b1a2a] border-0"/>
+            <Input placeholder="A/C" value={newEntry.acType||""} onChange={(e)=>setNewEntry({...newEntry,acType:e.target.value})} className="bg-[#0b1a2a] border-0"/>
+            <Input placeholder="DEP" value={newEntry.dep||""} onChange={(e)=>setNewEntry({...newEntry,dep:e.target.value})} className="bg-[#0b1a2a] border-0"/>
+            <Input placeholder="ARR" value={newEntry.arr||""} onChange={(e)=>setNewEntry({...newEntry,arr:e.target.value})} className="bg-[#0b1a2a] border-0"/>
+            <Input placeholder="Block Off (UTC)" value={newEntry.blockOff||""} onChange={(e)=>setNewEntry({...newEntry,blockOff:e.target.value})} className="bg-[#0b1a2a] border-0"/>
+            <Input placeholder="Block On (UTC)" value={newEntry.blockOn||""} onChange={(e)=>setNewEntry({...newEntry,blockOn:e.target.value})} className="bg-[#0b1a2a] border-0"/>
+            <Input placeholder="Dauer (min)" value={newEntry.timeTotal?.toString()||""} onChange={(e)=>setNewEntry({...newEntry,timeTotal:Number(e.target.value)})} className="bg-[#0b1a2a] border-0"/>
+            <Select onValueChange={(v)=>setNewEntry({...newEntry,role:v})}>
+              <SelectTrigger className="bg-[#0b1a2a] border-0"><SelectValue placeholder="Rolle"/></SelectTrigger>
+              <SelectContent className="bg-[#0e243b] border-0">
+                <SelectItem value="PIC">PIC</SelectItem>
+                <SelectItem value="SIC">SIC</SelectItem>
+                <SelectItem value="Solo">Solo</SelectItem>
+                <SelectItem value="Sim">Sim</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input placeholder="Notizen" value={newEntry.notes||""} onChange={(e)=>setNewEntry({...newEntry,notes:e.target.value})} className="col-span-2 bg-[#0b1a2a] border-0"/>
+            <Button onClick={add} className="col-span-2 rounded-xl bg-[rgb(247,198,0)] text-black">Speichern</Button>
+            <Button onClick={onExport} variant="secondary" className="col-span-2 rounded-xl">CSV Export</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="lg:col-span-2">
+        <Card className="bg-[#0e243b] border-0 rounded-2xl">
+          <CardContent className="p-0">
+            <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+              <div className="font-semibold">Einträge</div>
+            </div>
+            <div className="p-2">
+              <div className="grid grid-cols-8 text-xs uppercase opacity-60 px-2 py-1">
+                <div>Datum</div><div>Flug</div><div>ICAO</div><div>A/C</div><div>DEP</div><div>ARR</div><div>Dauer</div><div>Aktion</div>
+              </div>
+              <div className="divide-y divide-white/5">
+                {log.map((e) => (
+                  <div key={e.id} className="grid grid-cols-8 items-center px-2 py-2 text-sm">
+                    <div>{e.date}</div>
+                    <div className="font-mono">{e.flight}</div>
+                    <div className="font-mono">{e.airport}</div>
+                    <div>{e.acType}</div>
+                    <div>{e.dep}</div>
+                    <div>{e.arr}</div>
+                    <div>{e.timeTotal ?? "—"}</div>
+                    <div>
+                      <Button size="sm" variant="secondary" className="rounded-xl" onClick={()=>deleteLog(e.id)}>Löschen</Button>
+                    </div>
+                  </div>
+                ))}
+                {log.length===0 && (
+                  <div className="px-4 py-6 text-sm opacity-70">Noch keine Einträge.</div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// --- Tiny toast system ---
+let _setToasts: React.Dispatch<React.SetStateAction<{ id: string; text: string }[]>> | null = null;
+function toast(text: string) {
+  _setToasts && _setToasts((t) => [{ id: crypto.randomUUID(), text }, ...t].slice(0, 4));
+}
+function Toasts() {
+  const [toasts, setToasts] = useState<{ id: string; text: string }[]>([]);
+  useEffect(() => { _setToasts = setToasts; return () => { _setToasts = null; }; }, []);
+  return (
+    <div className="fixed bottom-4 right-4 space-y-2 z-50">
+      <AnimatePresence>
+        {toasts.map((t) => (
+          <motion.div key={t.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+            className="px-4 py-2 rounded-xl shadow-lg" style={{ background: LH.yellow, color: "#000" }}>
+            {t.text}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
